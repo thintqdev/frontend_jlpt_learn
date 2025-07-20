@@ -21,6 +21,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import AppLayout from "@/components/app-layout";
 import { getCategoryById } from "@/lib/category";
 import { updateVocabularyStatus } from "@/lib/vocabulary";
+import { ElevenLabsClient, play } from "@elevenlabs/elevenlabs-js";
 
 interface Word {
   id: number;
@@ -135,12 +136,21 @@ export default function FlashcardPage({
     setCompletedCards(new Set());
   };
 
-  const handleSpeak = () => {
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(currentWord.hiragana);
-      utterance.lang = "ja-JP";
-      utterance.rate = 0.8;
-      speechSynthesis.speak(utterance);
+  const handleSpeak = async () => {
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: currentWord.hiragana }),
+      });
+      if (!res.ok) throw new Error("Không thể gọi API server");
+      const arrayBuffer = await res.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      audio.play();
+    } catch (err: any) {
+      alert("Không phát được âm thanh: " + err.message);
     }
   };
 

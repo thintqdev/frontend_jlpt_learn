@@ -57,6 +57,16 @@ const practiceGames = [
     time: "6 phút",
     points: "15-45 điểm",
   },
+  {
+    id: "listen",
+    title: "Nghe - chọn",
+    description: "Nghe câu ví dụ và chọn từ vựng",
+    icon: Headphones,
+    color: "from-yellow-500 to-yellow-600",
+    difficulty: "Trung bình",
+    time: "10 phút",
+    points: "15-45 điểm",
+  },
 ];
 
 export default function PracticePage() {
@@ -72,68 +82,6 @@ export default function PracticePage() {
                 Chọn trò chơi yêu thích để luyện từ vựng
               </p>
             </div>
-            <div className="text-right">
-              <div className="text-2xl font-bold mb-1">1,250</div>
-              <div className="text-xs text-primary-100">Điểm tổng</div>
-            </div>
-          </div>
-
-          {/* Daily Challenge */}
-          <Card className="bg-white/10 backdrop-blur-sm border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-yellow-400 rounded-full flex items-center justify-center">
-                    <Trophy className="h-6 w-6 text-yellow-800" />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-white mb-1">
-                      Thử thách hàng ngày
-                    </h3>
-                    <p className="text-sm text-primary-100">
-                      Hoàn thành 3 game bất kỳ
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="text-lg font-bold text-white">2/3</div>
-                  <div className="text-xs text-primary-100">Hoàn thành</div>
-                </div>
-              </div>
-              <div className="w-full bg-white/20 rounded-full h-2 mt-3">
-                <div
-                  className="bg-yellow-400 h-2 rounded-full"
-                  style={{ width: "66%" }}
-                ></div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="px-6 -mt-4 mb-6">
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-3 text-center">
-                <Star className="h-6 w-6 text-yellow-500 mx-auto mb-1" />
-                <div className="text-lg font-bold text-gray-900">47</div>
-                <div className="text-xs text-gray-600">Game hôm nay</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-3 text-center">
-                <Clock className="h-6 w-6 text-blue-500 mx-auto mb-1" />
-                <div className="text-lg font-bold text-gray-900">23m</div>
-                <div className="text-xs text-gray-600">Thời gian</div>
-              </CardContent>
-            </Card>
-            <Card className="border-0 shadow-sm">
-              <CardContent className="p-3 text-center">
-                <Trophy className="h-6 w-6 text-green-500 mx-auto mb-1" />
-                <div className="text-lg font-bold text-gray-900">85%</div>
-                <div className="text-xs text-gray-600">Độ chính xác</div>
-              </CardContent>
-            </Card>
           </div>
         </div>
 
@@ -208,7 +156,7 @@ export default function PracticePage() {
         </div>
 
         {/* Leaderboard Preview */}
-        <div className="px-6 mb-8">
+        {/* <div className="px-6 mb-8">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-bold text-gray-900">Bảng xếp hạng</h3>
             <Button variant="ghost" size="sm" className="text-primary-600">
@@ -243,7 +191,7 @@ export default function PracticePage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+        </div> */}
       </div>
     </AppLayout>
   );

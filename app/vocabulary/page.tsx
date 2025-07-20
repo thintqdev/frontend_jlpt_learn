@@ -360,7 +360,10 @@ export default function VocabularyListPage() {
                           Học từ vựng
                         </Button>
                       </Link>
-                      <Link href="/flashcard" className="flex-1">
+                      <Link
+                        href={`/flashcard/${category.id}`}
+                        className="flex-1"
+                      >
                         <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white">
                           Flash Card
                         </Button>
