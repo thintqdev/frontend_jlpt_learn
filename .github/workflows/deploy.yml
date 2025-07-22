@@ -18,10 +18,10 @@ jobs:
           npm install --legacy-peer-deps
           npm run build
 
-      - name: Check dist folder before deploy
+      - name: Check .next folder before deploy
         run: |
-          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
-            echo "dist folder is empty. Build failed or nothing to deploy."
+          if [ ! -d ".next" ] || [ -z "$(ls -A .next)" ]; then
+            echo ".next folder is empty. Build failed or nothing to deploy."
             exit 1
           fi
 
@@ -32,7 +32,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
-          source: "dist/*"
+          source: ".next/*"
           script: |
             cd ~/japanese-learning/frontend_jlpt_learn/
             git pull origin main
