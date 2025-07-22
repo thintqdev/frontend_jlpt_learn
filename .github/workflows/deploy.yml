@@ -18,6 +18,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
+          source: "dist/*"
           script: |
             cd ~/japanese-learning/frontend_jlpt_learn/
             git pull origin main
