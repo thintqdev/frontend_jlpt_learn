@@ -11,6 +11,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Build project
+        run: |
+          npm install --legacy-peer-deps
+          npm run build
+
+      - name: Check dist folder before deploy
+        run: |
+          if [ ! -d "dist" ] || [ -z "$(ls -A dist)" ]; then
+            echo "dist folder is empty. Build failed or nothing to deploy."
+            exit 1
+          fi
+
       - name: Deploy to Server via SSH
         uses: appleboy/scp-action@master
         with:
