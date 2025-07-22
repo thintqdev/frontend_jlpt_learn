@@ -11,6 +11,7 @@ import {
   BookAIcon,
   TrendingUp,
   BookAudio,
+  MessageCircle,
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -54,11 +55,17 @@ export default function BottomNavigation() {
       active: pathname.startsWith("/exercise"),
     },
     {
-      href: "/profile",
-      icon: User,
-      label: "Cá nhân",
-      active: pathname === "/profile",
+      href: "/kaiwa",
+      icon: MessageCircle,
+      label: "Kaiwa",
+      active: pathname.startsWith("/kaiwa"),
     },
+    // {
+    //   href: "/profile",
+    //   icon: User,
+    //   label: "Cá nhân",
+    //   active: pathname === "/profile",
+    // },
   ];
 
   return (

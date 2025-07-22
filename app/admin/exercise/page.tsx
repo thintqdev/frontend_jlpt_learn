@@ -65,7 +65,7 @@ const emptyQuestion: Omit<Question, "id"> = {
   question: "",
   options: ["", "", "", ""],
   correctAnswer: 0,
-  level: "N5",
+  level: "N3",
   explanation: "",
 };
 
