@@ -273,7 +273,7 @@ export default function AdminPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Admin | Học từ vựng tiếng Nhật
+            Admin | Học từ vựng tiếng Nhật cùng Mr Xìn
           </h1>
           <p className="text-gray-600">
             Quản lý các nhóm từ vựng và từ vựng trong hệ thống. Bạn có thể thêm,
