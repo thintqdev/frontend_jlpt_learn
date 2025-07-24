@@ -375,7 +375,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-screen overflow-y-auto">
                 {categories.map((category) => (
                   <div
                     key={category.id}

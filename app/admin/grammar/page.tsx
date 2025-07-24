@@ -331,10 +331,10 @@ export default function GrammarAdminPage() {
             từng cách dùng.
           </p>
         </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
           {/* Danh sách điểm ngữ pháp */}
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Điểm ngữ pháp</CardTitle>
@@ -345,11 +345,11 @@ export default function GrammarAdminPage() {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-hidden">
               {showAddGrammar && (
-                <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+                <div className="mb-4 p-4 border rounded-lg bg-gray-50 flex-shrink-0">
                   <h3 className="font-medium mb-3">Thêm điểm ngữ pháp mới</h3>
-                  <div className="space-y-3">
+                  <div className="space-y-3 max-h-screen overflow-y-auto">
                     <Input
                       placeholder="Tên điểm ngữ pháp (ví dụ: 〜ている)"
                       value={newGrammar.title}
@@ -416,11 +416,11 @@ export default function GrammarAdminPage() {
                   </div>
                 </div>
               )}
-              <div className="space-y-3">
+              <div className="overflow-y-auto max-h-screen space-y-3 pr-2">
                 {grammarList.map((g) => (
                   <div
                     key={g.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors ${
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex-shrink-0 ${
                       selectedGrammarId === g.id
                         ? "border-yellow-500 bg-yellow-50"
                         : "border-gray-200 hover:border-gray-300"
@@ -457,8 +457,8 @@ export default function GrammarAdminPage() {
           </Card>
 
           {/* Chi tiết điểm ngữ pháp, các cách dùng và ví dụ */}
-          <Card>
-            <CardHeader>
+          <Card className="flex flex-col">
+            <CardHeader className="flex-shrink-0">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>
@@ -486,12 +486,12 @@ export default function GrammarAdminPage() {
                 )}
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="flex-1 overflow-y-auto">
               {selectedGrammar ? (
                 <>
                   {/* Thêm/sửa usage */}
                   {showAddUsage && (
-                    <div className="mb-4 p-4 border rounded-lg bg-gray-50">
+                    <div className="mb-4 p-4 border rounded-lg bg-gray-50 flex-shrink-0">
                       <h3 className="font-medium mb-3">
                         {editingUsageId
                           ? "Sửa cách dùng"

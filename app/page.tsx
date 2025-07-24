@@ -92,10 +92,10 @@ export default function HomePage() {
       <section className="px-6 mt-6">
         <h3 className="text-lg font-bold text-gray-900 mb-3">Tính năng nổi bật</h3>
         <div className="grid grid-cols-2 gap-4">
-          <FeatureCard icon={BookOpen} title="Từ vựng" description="Chủ đề đa dạng" link="/vocabulary" color="blue" />
+          <FeatureCard icon={BookOpen} title="Từ vựng" description="Chủ đề đa dạng" link="/vocabulary" color="purple" />
           <FeatureCard icon={Mic} title="Luyện giao tiếp" description="Kaiwa, shadowing" link="/kaiwa" color="rose" />
           <FeatureCard icon={FileText} title="Ngữ pháp" description="Theo trình độ" link="/grammar" color="green" />
-          <FeatureCard icon={Brain} title="Quiz & Game" description="Trắc nghiệm vui" link="/quiz" color="purple" />
+          <FeatureCard icon={Brain} title="Quiz & Game" description="Trắc nghiệm vui" link="/quiz" color="orange" />
         </div>
       </section>
 
