@@ -86,7 +86,7 @@ export default function CategoryPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white min-h-screen">
+      <div className="min-h-screen">
         {/* Header */}
         <div className="px-6 pt-12 pb-6 border-b border-gray-100">
           <Link href="/vocabulary">

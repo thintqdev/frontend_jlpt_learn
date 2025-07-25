@@ -157,7 +157,7 @@ export default function MatchingPage() {
   if (!isGameStarted) {
     return (
       <AppLayout>
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+        <div className="flex flex-col items-center justify-center min-h-screen px-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu
@@ -223,7 +223,7 @@ export default function MatchingPage() {
 
     return (
       <AppLayout>
-        <div className="bg-gray-50 min-h-screen">
+        <div className="min-h-screen">
           <div className="px-6 pt-12 pb-8">
             <div className="text-center mb-8">
               <div className="text-6xl mb-4">
@@ -287,7 +287,7 @@ export default function MatchingPage() {
 
   return (
     <AppLayout>
-      <div className="bg-gray-50 min-h-screen">
+      <div className="min-h-screen">
         {/* Header */}
         <div className="bg-white px-6 pt-12 pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between mb-4">

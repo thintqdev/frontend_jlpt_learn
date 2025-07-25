@@ -156,7 +156,7 @@ export default function FlashcardPage({
 
   return (
     <AppLayout>
-      <div className="bg-gray-50 min-h-screen">
+      <div className="min-h-screen">
         {/* Header */}
         <div className="bg-white px-6 pt-12 pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between mb-4">

@@ -112,7 +112,7 @@ export default function KaiwaDailyPage() {
 
   if (selectedKaiwa) {
     return (
-      <div className="bg-white min-h-screen">
+      <div className="min-h-screen">
         <div className="px-4 sm:px-6 pt-6 pb-4 border-b border-gray-100 bg-gradient-to-r from-rose-50 to-indigo-50">
           <Button
             variant="ghost"
@@ -226,7 +226,7 @@ export default function KaiwaDailyPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white min-h-screen">
+      <div className="min-h-screen">
         <div className="px-4 sm:px-6 pt-10 pb-6 border-b border-gray-100">
           <div className="flex justify-between items-center mb-4">
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">

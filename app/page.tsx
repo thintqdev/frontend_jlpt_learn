@@ -2,7 +2,15 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import { BookOpen, Mic, FileText, Brain, Award, Clock, Play } from "lucide-react";
+import {
+  BookOpen,
+  Mic,
+  FileText,
+  Brain,
+  Award,
+  Clock,
+  Play,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +32,8 @@ export default function HomePage() {
           }
         }
       }`;
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
+      const apiUrl =
+        process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
       try {
         const response = await fetch(`${apiUrl}/graphql`, {
           method: "POST",
@@ -81,7 +90,10 @@ export default function HomePage() {
               <Badge className="bg-green-100 text-green-700">8/10 từ</Badge>
             </div>
             <div className="w-full h-2 bg-gray-200 rounded-full mb-1">
-              <div className="h-2 bg-green-500 rounded-full" style={{ width: "80%" }} />
+              <div
+                className="h-2 bg-green-500 rounded-full"
+                style={{ width: "80%" }}
+              />
             </div>
             <p className="text-xs text-gray-500">Còn 2 từ nữa là hoàn thành!</p>
           </CardContent>
@@ -90,12 +102,38 @@ export default function HomePage() {
 
       {/* Tính năng chính */}
       <section className="px-6 mt-6">
-        <h3 className="text-lg font-bold text-gray-900 mb-3">Tính năng nổi bật</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-3">
+          Tính năng nổi bật
+        </h3>
         <div className="grid grid-cols-2 gap-4">
-          <FeatureCard icon={BookOpen} title="Từ vựng" description="Chủ đề đa dạng" link="/vocabulary" color="purple" />
-          <FeatureCard icon={Mic} title="Luyện giao tiếp" description="Kaiwa, shadowing" link="/kaiwa" color="rose" />
-          <FeatureCard icon={FileText} title="Ngữ pháp" description="Theo trình độ" link="/grammar" color="green" />
-          <FeatureCard icon={Brain} title="Quiz & Game" description="Trắc nghiệm vui" link="/quiz" color="orange" />
+          <FeatureCard
+            icon={BookOpen}
+            title="Từ vựng"
+            description="Chủ đề đa dạng"
+            link="/vocabulary"
+            color="primary"
+          />
+          <FeatureCard
+            icon={Mic}
+            title="Luyện giao tiếp"
+            description="Kaiwa, shadowing"
+            link="/kaiwa"
+            color="orange"
+          />
+          <FeatureCard
+            icon={FileText}
+            title="Ngữ pháp"
+            description="Theo trình độ"
+            link="/grammar"
+            color="green"
+          />
+          <FeatureCard
+            icon={Brain}
+            title="Quiz & Game"
+            description="Trắc nghiệm vui"
+            link="/quiz"
+            color="rose"
+          />
         </div>
       </section>
 
@@ -109,7 +147,9 @@ export default function HomePage() {
               <p className="text-sm text-gray-500">Bạn đã học 80%</p>
             </div>
             <Link href="/vocabulary/1">
-              <Button variant="outline" size="sm">Tiếp tục</Button>
+              <Button variant="outline" size="sm">
+                Tiếp tục
+              </Button>
             </Link>
           </CardContent>
         </Card>
@@ -120,7 +160,9 @@ export default function HomePage() {
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-gray-900">Chủ đề từ vựng</h3>
           <Link href="/vocabulary">
-            <Button variant="ghost" size="sm">Xem tất cả</Button>
+            <Button variant="ghost" size="sm">
+              Xem tất cả
+            </Button>
           </Link>
         </div>
 
@@ -129,14 +171,21 @@ export default function HomePage() {
         ) : (
           <div className="space-y-2">
             {categories.slice(0, 3).map((cat) => (
-              <Card key={cat.id} className="hover:shadow-md transition active:scale-95">
+              <Card
+                key={cat.id}
+                className="hover:shadow-md transition active:scale-95"
+              >
                 <CardContent className="p-4 flex justify-between items-center">
                   <div>
                     <h4 className="font-semibold text-gray-800">{cat.name}</h4>
-                    <p className="text-sm text-gray-500">{cat.level} • 20+ từ</p>
+                    <p className="text-sm text-gray-500">
+                      {cat.level} • 20+ từ
+                    </p>
                   </div>
                   <Link href={`/vocabulary/${cat.id}`}>
-                    <Button variant="outline" size="sm">Học</Button>
+                    <Button variant="outline" size="sm">
+                      Học
+                    </Button>
                   </Link>
                 </CardContent>
               </Card>
@@ -147,10 +196,20 @@ export default function HomePage() {
 
       {/* Hoạt động gần đây */}
       <section className="px-6 mt-6 mb-10">
-        <h3 className="text-lg font-bold text-gray-900 mb-3">Hoạt động gần đây</h3>
+        <h3 className="text-lg font-bold text-gray-900 mb-3">
+          Hoạt động gần đây
+        </h3>
         <div className="space-y-3">
-          <RecentActivity icon={<Award className="text-green-600" />} text="Hoàn thành chủ đề Gia đình" time="2 giờ trước" />
-          <RecentActivity icon={<Clock className="text-purple-600" />} text="Học 20 từ mới" time="Hôm qua" />
+          <RecentActivity
+            icon={<Award className="text-green-600" />}
+            text="Hoàn thành chủ đề Gia đình"
+            time="2 giờ trước"
+          />
+          <RecentActivity
+            icon={<Clock className="text-purple-600" />}
+            text="Học 20 từ mới"
+            time="Hôm qua"
+          />
         </div>
       </section>
     </AppLayout>
@@ -160,7 +219,9 @@ export default function HomePage() {
 function FeatureCard({ icon: Icon, title, description, link, color }: any) {
   return (
     <Link href={link}>
-      <Card className={`bg-${color}-500 text-white border-none shadow-md hover:shadow-lg`}>
+      <Card
+        className={`bg-${color}-500 text-white border-none shadow-md hover:shadow-lg`}
+      >
         <CardContent className="p-4 flex items-center justify-between">
           <div>
             <h4 className="font-semibold">{title}</h4>
@@ -173,7 +234,15 @@ function FeatureCard({ icon: Icon, title, description, link, color }: any) {
   );
 }
 
-function RecentActivity({ icon, text, time }: { icon: React.ReactNode; text: string; time: string }) {
+function RecentActivity({
+  icon,
+  text,
+  time,
+}: {
+  icon: React.ReactNode;
+  text: string;
+  time: string;
+}) {
   return (
     <div className="flex items-center space-x-3 p-3 bg-white rounded-xl shadow-sm">
       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">

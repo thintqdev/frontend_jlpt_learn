@@ -1,33 +1,32 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { getGrammar } from "@/lib/grammar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/app-layout";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, ChevronRight } from "lucide-react";
+import { ArrowLeft, BookOpen } from "lucide-react";
 import { renderExample } from "@/common/utils";
 
-// Màu theo cấp độ
+// Màu cấp độ pastel, badge nhỏ
 function levelColor(level: string) {
   switch (level) {
     case "N5":
-      return "bg-green-100 text-green-700 border-green-200";
+      return "bg-green-50 text-green-700 border border-green-200";
     case "N4":
-      return "bg-blue-100 text-blue-700 border-blue-200";
+      return "bg-blue-50 text-blue-700 border border-blue-200";
     case "N3":
-      return "bg-yellow-100 text-yellow-700 border-yellow-200";
+      return "bg-yellow-50 text-yellow-700 border border-yellow-200";
     case "N2":
-      return "bg-orange-100 text-orange-700 border-orange-200";
+      return "bg-orange-50 text-orange-700 border border-orange-200";
     default:
-      return "bg-red-100 text-red-700 border-red-200";
+      return "bg-red-50 text-red-700 border border-red-200";
   }
 }
 
 export default function GrammarDetailPage() {
-  const router = useRouter();
   const params = useParams();
   const id = params?.id;
   const [grammar, setGrammar] = useState<any>(null);
@@ -52,10 +51,10 @@ export default function GrammarDetailPage() {
   if (loading) {
     return (
       <AppLayout>
-        <div className="px-6 pt-12 pb-6">
-          <div className="animate-pulse">
-            <div className="h-8 bg-gray-200 rounded w-32 mb-4"></div>
-            <div className="h-12 bg-gray-200 rounded mb-4"></div>
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <div className="animate-pulse w-full max-w-lg">
+            <div className="h-8 bg-gray-200 rounded w-1/2 mb-4"></div>
+            <div className="h-10 bg-gray-200 rounded mb-4"></div>
             <div className="h-32 bg-gray-200 rounded"></div>
           </div>
         </div>
@@ -66,18 +65,16 @@ export default function GrammarDetailPage() {
   if (!grammar) {
     return (
       <AppLayout>
-        <div className="px-6 pt-12 pb-6">
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">😢</div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Không tìm thấy ngữ pháp
-            </h3>
-            <Link href="/grammar">
-              <Button variant="outline" className="mt-4">
-                <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại danh sách
-              </Button>
-            </Link>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-[300px]">
+          <div className="text-6xl mb-4">😢</div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            Không tìm thấy ngữ pháp
+          </h3>
+          <Link href="/grammar">
+            <Button variant="outline" className="mt-4">
+              <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại danh sách
+            </Button>
+          </Link>
         </div>
       </AppLayout>
     );
@@ -85,90 +82,97 @@ export default function GrammarDetailPage() {
 
   return (
     <AppLayout>
-      <div className="bg-white min-h-screen px-4 sm:px-6 lg:px-8 py-8">
-        {/* Nút quay lại */}
-        <div className="mb-6">
-          <Link href="/grammar">
-            <Button variant="ghost" className="rounded-full">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Quay lại danh sách
-            </Button>
-          </Link>
-        </div>
+      <div className="relative min-h-screen flex justify-center items-center">
+        {/* Japanese background image (ảnh số 1) */}
+        <div
+          className="absolute inset-0 w-full h-full z-0 pointer-events-none"
+          aria-hidden
+        />
 
-        {/* Thông tin ngữ pháp chính */}
-        <div className="bg-gradient-to-br from-white via-gray-50 to-gray-100 border rounded-xl p-6 mb-8 shadow-md">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <BookOpen className="h-8 w-8 text-primary" />
-              <h1 className="text-2xl font-bold">
-                {grammar.title}: {grammar.definition}
-              </h1>
-            </div>
-            <Badge
-              className={`text-sm font-medium border ${levelColor(
-                grammar.level
-              )}`}
-            >
-              {grammar.level}
-            </Badge>
+        {/* Nội dung trang */}
+        <div className="relative z-10 w-full max-w-2xl mx-auto py-8 px-4 sm:px-6">
+          {/* Nút quay lại */}
+          <div className="mb-8">
+            <Link href="/grammar">
+              <Button variant="ghost" className="rounded-full">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Quay lại danh sách
+              </Button>
+            </Link>
           </div>
-          {grammar.description && (
-            <p className="mt-4 text-gray-700 text-lg font-medium">
-              {grammar.description}
-            </p>
-          )}
-        </div>
 
-        {/* Danh sách cách dùng */}
-        {grammar.usages?.length > 0 && (
-          <div className="space-y-6">
-            {grammar.usages.map((usage: any, idx: number) => (
+          {/* Card ngữ pháp */}
+          <div className="rounded-2xl shadow-lg bg-white/85 border px-8 py-6 mb-10 backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-9 w-9 text-primary" />
+                <h1 className="text-3xl font-bold text-gray-900">
+                  {grammar.title}
+                </h1>
+              </div>
+              <Badge
+                className={`text-base px-3 py-1 font-semibold rounded-full ${levelColor(
+                  grammar.level
+                )}`}
+              >
+                {grammar.level}
+              </Badge>
+            </div>
+            <div className="text-lg text-primary-700 font-medium mb-2">
+              {grammar.definition}
+            </div>
+            {grammar.description && (
+              <div className="text-gray-600 text-base">
+                {grammar.description}
+              </div>
+            )}
+          </div>
+
+          {/* Usage list */}
+          <div className="space-y-8">
+            {grammar.usages?.map((usage: any, idx: number) => (
               <div
                 key={usage.id}
-                className="border rounded-lg shadow-sm bg-white p-5"
+                className="border rounded-xl bg-white/80 shadow-sm p-6 backdrop-blur-sm"
               >
-                {/* Tiêu đề usage */}
-                <div className="flex justify-between items-start mb-2">
-                  <div>
-                    <h2 className="text-xl font-bold text-primary-700 mb-1">
-                      {idx + 1}. {usage.structure}
-                    </h2>
-                    {usage.note && (
-                      <div className="mt-1">
-                        <span className="inline-block px-2 py-1 rounded bg-yellow-100 text-yellow-800 text-xs font-medium">
-                          {usage.note}
-                        </span>
-                      </div>
-                    )}
-                    <div className="text-gray-700">
-                      <span className="font-semibold text-primary-700">
-                        Ý nghĩa:
-                      </span>{" "}
-                      {usage.meaning}
-                    </div>
+                <div className="mb-3">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xl font-bold text-primary-700">
+                      {idx + 1}.
+                    </span>
+                    <span className="font-mono text-lg text-gray-800">
+                      {usage.structure}
+                    </span>
+                  </div>
+                  {usage.note && (
+                    <span className="inline-block mt-1 px-2 py-1 rounded bg-gray-100 text-gray-700 text-xs font-medium border border-gray-300">
+                      {usage.note}
+                    </span>
+                  )}
+                  <div className="mt-2 text-gray-700">
+                    <span className="font-semibold text-primary-700">
+                      Ý nghĩa:
+                    </span>{" "}
+                    {usage.meaning}
                   </div>
                 </div>
-
-                {/* Ví dụ */}
                 {usage.examples?.length > 0 ? (
-                  <div className="mt-4">
-                    <div className="flex items-center text-sm text-gray-500 font-semibold mb-2">
-                      <ChevronRight className="w-4 h-4 text-primary-400 mr-1" />
-                      Ví dụ minh họa:
+                  <div>
+                    <div className="text-sm text-gray-500 font-semibold mb-2">
+                      Ví dụ:
                     </div>
                     <ul className="space-y-3">
                       {usage.examples.map((ex: any) => (
                         <li
                           key={ex.id}
-                          className="p-3 rounded-md bg-gray-50 border border-gray-200"
+                          className="p-4 rounded-lg bg-white border border-gray-200"
                         >
-                          <p className="text-black text-base font-semibold mb-1">
+                          <div className="text-gray-900 font-medium mb-1 text-base leading-relaxed">
                             {renderExample(ex.sentence)}
-                          </p>
-                          <p className="text-sm text-gray-600 italic">
+                          </div>
+                          <div className="text-sm text-gray-500 italic">
                             {ex.translation}
-                          </p>
+                          </div>
                         </li>
                       ))}
                     </ul>
@@ -181,7 +185,7 @@ export default function GrammarDetailPage() {
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
     </AppLayout>
   );

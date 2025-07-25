@@ -185,7 +185,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
     // UI chọn category
     return (
       <AppLayout>
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 px-4">
+        <div className="flex flex-col items-center justify-center min-h-screen  px-4">
           <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu nghe chọn đáp án
@@ -279,7 +279,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
     const accuracy = Math.round((correctAnswers / questions.length) * 100);
     return (
       <AppLayout>
-        <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+        <div className="min-h-screen flex flex-col items-center justify-center">
           <div className="w-full max-w-md bg-white rounded-xl shadow p-8 mt-12">
             <div className="text-center mb-6">
               <div className="text-5xl mb-3">
@@ -335,7 +335,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
 
   return (
     <AppLayout>
-      <div className="bg-gray-50 min-h-screen">
+      <div className=" min-h-screen">
         <div className="bg-white px-6 pt-12 pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between mb-4">
             <Link href="/practice">
