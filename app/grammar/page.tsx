@@ -29,7 +29,7 @@ export default function GrammarListPage() {
       setLoading(true);
       try {
         const data = await getGrammars();
-        setGrammars(data || []);
+        setGrammars(data.items || []);
       } catch {
         setGrammars([]);
       } finally {
