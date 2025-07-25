@@ -47,32 +47,44 @@ export interface CreateConversationInput {
     return result.data.createConversation;
   }
   
-  // Get all conversations
-  export async function fetchConversations(): Promise<Conversation[]> {
-    const query = `
-      query {
-        conversations {
-          id
-          title
-          level
-          category
-          duration
-          conversation
-        }
+// Get all conversations paginated
+export async function fetchConversations(
+  params?: { search?: string; sort?: "asc" | "desc"; page?: number; pageSize?: number }
+): Promise<Conversation[]> {
+  const { search = "", sort = "desc", page = 1, pageSize = 100 } = params || {}; // pageSize mặc định lớn hơn
+
+  const query = `
+    query Conversations($search: String, $sort: String, $page: Int, $pageSize: Int) {
+      conversations(search: $search, sort: $sort, page: $page, pageSize: $pageSize) {
+        id
+        title
+        level
+        category
+        duration
+        conversation
       }
-    `;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-  
-    const response = await fetch(`${apiUrl}/graphql`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
-    });
-  
-    const result = await response.json();
-    if (result.errors) throw new Error(result.errors[0].message);
-    return result.data.conversations;
-  }
+    }
+  `;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+  const response = await fetch(`${apiUrl}/graphql`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query,
+      variables: {
+        search: search || null,
+        sort: sort || null,
+        page,
+        pageSize,
+      },
+    }),
+  });
+
+  const result = await response.json();
+  if (result.errors) throw new Error(result.errors[0].message);
+  return result.data.conversations;
+}
   
   // Get one conversation by ID
   export async function getConversationById(id: number): Promise<Conversation> {
@@ -154,3 +166,25 @@ export interface CreateConversationInput {
     return result.data.removeConversation;
   }
   
+  // Thêm hàm import nhiều hội thoại bằng JSON (dùng mutation createConversationJson)
+export async function createConversationJson(jsonString: string): Promise<boolean> {
+  const mutation = `
+    mutation CreateConversationJson($input: CreateConversationJsonInput!) {
+      createConversationJson(input: $input)
+    }
+  `;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
+
+  const response = await fetch(`${apiUrl}/graphql`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      query: mutation,
+      variables: { input: { input: jsonString } },
+    }),
+  });
+
+  const result = await response.json();
+  if (result.errors) throw new Error(result.errors[0].message);
+  return result.data.createConversationJson;
+}

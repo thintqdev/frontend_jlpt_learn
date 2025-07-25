@@ -170,7 +170,6 @@ export async function removeGrammarUsage(id: number) {
     mutation {
       removeGrammarUsage(id: ${id}) {
         id
-        usage
       }
     }
   `;

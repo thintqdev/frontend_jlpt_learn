@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import {
   Play,
 } from "lucide-react";
 import AppLayout from "@/components/app-layout";
+import { fetchConversations, Conversation } from "@/lib/conversation";
 
 // Định nghĩa type cho hội thoại
 interface KaiwaLine {
@@ -25,376 +26,61 @@ interface Kaiwa {
   id: number;
   title: string;
   level: string;
+  category?: string;
+  duration?: string;
   conversation: KaiwaLine[];
 }
-
-// Dữ liệu kaiwa mẫu (có thể import từ file riêng nếu cần)
-const kaiwaSamples = [
-  {
-    id: 1,
-    title: "Chào buổi sáng",
-    level: "N5",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "おはようございます。",
-        romaji: "Ohayou gozaimasu.",
-        vi: "Chào buổi sáng.",
-      },
-      {
-        speaker: "B",
-        jp: "おはよう。元気？",
-        romaji: "Ohayou. Genki?",
-        vi: "Chào buổi sáng. Khỏe không?",
-      },
-      {
-        speaker: "A",
-        jp: "はい、元気です。",
-        romaji: "Hai, genki desu.",
-        vi: "Vâng, tôi khỏe.",
-      },
-    ],
-  },
-  {
-    id: 2,
-    title: "Đi mua sắm",
-    level: "N5",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "これ、いくらですか。",
-        romaji: "Kore, ikura desu ka?",
-        vi: "Cái này bao nhiêu tiền vậy?",
-      },
-      {
-        speaker: "B",
-        jp: "500円です。",
-        romaji: "Go-hyaku en desu.",
-        vi: "500 yên ạ.",
-      },
-      {
-        speaker: "A",
-        jp: "じゃあ、これをください。",
-        romaji: "Jaa, kore o kudasai.",
-        vi: "Vậy, cho tôi cái này nhé.",
-      },
-    ],
-  },
-  {
-    id: 3,
-    title: "Hỏi đường",
-    level: "N4",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "すみません、駅はどこですか。",
-        vi: "Xin lỗi, nhà ga ở đâu vậy?",
-      },
-      {
-        speaker: "B",
-        jp: "まっすぐ行って、右に曲がってください。",
-        vi: "Đi thẳng rồi rẽ phải nhé.",
-      },
-    ],
-  },
-  {
-    id: 4,
-    title: "Gọi món ở nhà hàng",
-    level: "N5",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "すみません、メニューをください。",
-        vi: "Xin lỗi, cho tôi xem thực đơn.",
-      },
-      { speaker: "B", jp: "はい、どうぞ。", vi: "Vâng, mời bạn." },
-      {
-        speaker: "A",
-        jp: "このラーメンを一つお願いします。",
-        vi: "Cho tôi một tô mì ramen này.",
-      },
-    ],
-  },
-  {
-    id: 5,
-    title: "Hẹn gặp bạn",
-    level: "N4",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "明日、何時に会いましょうか。",
-        vi: "Ngày mai, mấy giờ mình gặp nhau?",
-      },
-      {
-        speaker: "B",
-        jp: "午後2時はどうですか。",
-        vi: "2 giờ chiều được không?",
-      },
-      { speaker: "A", jp: "いいですね。", vi: "Được đấy." },
-    ],
-  },
-  {
-    id: 6,
-    title: "Mua vé tàu",
-    level: "N4",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "新幹線の切符を買いたいです。",
-        vi: "Tôi muốn mua vé tàu shinkansen.",
-      },
-      { speaker: "B", jp: "どこまで行きますか。", vi: "Bạn đi đến đâu?" },
-      { speaker: "A", jp: "東京までです。", vi: "Đến Tokyo." },
-    ],
-  },
-  {
-    id: 7,
-    title: "Đi khám bệnh",
-    level: "N3",
-    conversation: [
-      { speaker: "A", jp: "頭が痛いです。", vi: "Tôi bị đau đầu." },
-      { speaker: "B", jp: "熱はありますか。", vi: "Bạn có bị sốt không?" },
-      { speaker: "A", jp: "はい、少しあります。", vi: "Vâng, tôi hơi sốt." },
-    ],
-  },
-  {
-    id: 8,
-    title: "Xin nghỉ phép",
-    level: "N3",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "来週、休みを取りたいです。",
-        vi: "Tuần sau tôi muốn xin nghỉ.",
-      },
-      { speaker: "B", jp: "何日間ですか。", vi: "Bạn nghỉ mấy ngày?" },
-      { speaker: "A", jp: "三日間です。", vi: "Ba ngày." },
-    ],
-  },
-  {
-    id: 9,
-    title: "Nhận bưu kiện",
-    level: "N2",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "荷物を受け取りたいです。",
-        vi: "Tôi muốn nhận bưu kiện.",
-      },
-      {
-        speaker: "B",
-        jp: "お名前を教えてください。",
-        vi: "Bạn cho tôi biết tên nhé.",
-      },
-      { speaker: "A", jp: "グエンです。", vi: "Tôi là Nguyễn." },
-    ],
-  },
-  {
-    id: 10,
-    title: "Phỏng vấn xin việc",
-    level: "N2",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "自己紹介をお願いします。",
-        vi: "Bạn hãy giới thiệu bản thân.",
-      },
-      {
-        speaker: "B",
-        jp: "グエンと申します。ベトナムから来ました。",
-        vi: "Tôi tên là Nguyễn, đến từ Việt Nam.",
-      },
-      {
-        speaker: "A",
-        jp: "よろしくお願いします。",
-        vi: "Rất mong được giúp đỡ.",
-      },
-    ],
-  },
-  {
-    id: 11,
-    title: "Thảo luận dự án",
-    level: "N1",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "このプロジェクトの進捗はどうですか。",
-        vi: "Tiến độ dự án này thế nào rồi?",
-      },
-      {
-        speaker: "B",
-        jp: "順調に進んでいます。",
-        vi: "Mọi việc tiến triển tốt.",
-      },
-      { speaker: "A", jp: "何か問題はありますか。", vi: "Có vấn đề gì không?" },
-    ],
-  },
-  {
-    id: 12,
-    title: "Bàn về thời tiết",
-    level: "N5",
-    conversation: [
-      { speaker: "A", jp: "今日は暑いですね。", vi: "Hôm nay nóng nhỉ." },
-      {
-        speaker: "B",
-        jp: "そうですね。夏が来ました。",
-        vi: "Đúng vậy, mùa hè đến rồi.",
-      },
-    ],
-  },
-  {
-    id: 13,
-    title: "Gọi taxi",
-    level: "N4",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "タクシーを呼んでください。",
-        vi: "Làm ơn gọi giúp tôi taxi.",
-      },
-      { speaker: "B", jp: "どこまで行きますか。", vi: "Bạn đi đến đâu?" },
-      { speaker: "A", jp: "駅までお願いします。", vi: "Đến nhà ga giúp tôi." },
-    ],
-  },
-  {
-    id: 14,
-    title: "Đặt phòng khách sạn",
-    level: "N3",
-    conversation: [
-      { speaker: "A", jp: "部屋を予約したいです。", vi: "Tôi muốn đặt phòng." },
-      { speaker: "B", jp: "何名様ですか。", vi: "Quý khách đi mấy người?" },
-      { speaker: "A", jp: "二人です。", vi: "Hai người." },
-    ],
-  },
-  {
-    id: 15,
-    title: "Cuộc hẹn ở quán cà phê",
-    level: "N3",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "こんにちは、遅れてごめんね。",
-        vi: "Xin chào, xin lỗi mình đến muộn.",
-      },
-      {
-        speaker: "B",
-        jp: "大丈夫だよ。今来たところ。",
-        vi: "Không sao đâu. Mình cũng vừa mới đến.",
-      },
-      { speaker: "A", jp: "何を飲みたい？", vi: "Bạn muốn uống gì?" },
-      {
-        speaker: "B",
-        jp: "コーヒーにしようかな。",
-        vi: "Chắc mình sẽ uống cà phê.",
-      },
-      {
-        speaker: "A",
-        jp: "私も同じのを頼むね。",
-        vi: "Mình cũng gọi giống bạn nhé.",
-      },
-      {
-        speaker: "B",
-        jp: "最近どう？忙しい？",
-        vi: "Dạo này bạn thế nào? Bận không?",
-      },
-      {
-        speaker: "A",
-        jp: "ちょっと忙しいけど、元気だよ。",
-        vi: "Cũng hơi bận nhưng mình vẫn khỏe.",
-      },
-    ],
-  },
-  {
-    id: 16,
-    title: "Thảo luận về du lịch",
-    level: "N2",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "夏休みにどこか行く予定ある？",
-        vi: "Kỳ nghỉ hè này bạn có dự định đi đâu không?",
-      },
-      {
-        speaker: "B",
-        jp: "北海道に行きたいと思ってる。",
-        vi: "Mình định đi Hokkaido.",
-      },
-      {
-        speaker: "A",
-        jp: "いいね！何日ぐらい行くの？",
-        vi: "Hay quá! Bạn đi mấy ngày?",
-      },
-      { speaker: "B", jp: "5日間の予定だよ。", vi: "Dự định đi 5 ngày." },
-      {
-        speaker: "A",
-        jp: "美味しいものたくさん食べてきてね。",
-        vi: "Nhớ ăn nhiều món ngon nhé.",
-      },
-      {
-        speaker: "B",
-        jp: "もちろん！写真もたくさん撮るよ。",
-        vi: "Tất nhiên rồi! Mình sẽ chụp nhiều ảnh nữa.",
-      },
-    ],
-  },
-  {
-    id: 17,
-    title: "Phàn nàn về dịch vụ",
-    level: "N1",
-    conversation: [
-      {
-        speaker: "A",
-        jp: "すみません、注文した料理がまだ来ていません。",
-        vi: "Xin lỗi, món tôi gọi vẫn chưa được mang ra.",
-      },
-      {
-        speaker: "B",
-        jp: "申し訳ありません。すぐに確認いたします。",
-        vi: "Xin lỗi quý khách. Tôi sẽ kiểm tra ngay.",
-      },
-      {
-        speaker: "A",
-        jp: "もう30分も待っています。",
-        vi: "Tôi đã đợi 30 phút rồi.",
-      },
-      {
-        speaker: "B",
-        jp: "大変ご迷惑をおかけしました。",
-        vi: "Thành thật xin lỗi vì đã làm phiền quý khách.",
-      },
-      {
-        speaker: "A",
-        jp: "できれば早くお願いします。",
-        vi: "Nếu được thì làm ơn mang ra nhanh giúp tôi.",
-      },
-      {
-        speaker: "B",
-        jp: "かしこまりました。すぐにお持ちします。",
-        vi: "Vâng, tôi sẽ mang ra ngay.",
-      },
-    ],
-  },
-];
 
 export default function KaiwaDailyPage() {
   const [selectedLevel, setSelectedLevel] = useState("Tất cả");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [selectedKaiwa, setSelectedKaiwa] = useState<any>(null);
-  const [showMeanings, setShowMeanings] = useState<any>({});
+  const [selectedKaiwa, setSelectedKaiwa] = useState<Kaiwa | null>(null);
+  const [showMeanings, setShowMeanings] = useState<Record<string, boolean>>({});
+  const [kaiwaList, setKaiwaList] = useState<Kaiwa[]>([]);
+  const [loading, setLoading] = useState(true);
+
   const pageSize = 8;
   const levels = ["Tất cả", "N5", "N4", "N3", "N2", "N1"];
 
+  useEffect(() => {
+    async function loadKaiwa() {
+      setLoading(true);
+      try {
+        // Gọi API lấy toàn bộ hội thoại, có thể truyền search & sort nếu muốn
+        const conversations: Conversation[] = await fetchConversations();
+        setKaiwaList(
+          conversations.map((conv) => ({
+            id: conv.id,
+            title: conv.title,
+            level: conv.level,
+            category: conv.category,
+            duration: conv.duration ?? "5 phút",
+            conversation: Array.isArray(conv.conversation)
+              ? conv.conversation
+              : [],
+          }))
+        );
+      } catch (err) {
+        console.error("Lỗi khi lấy hội thoại:", err);
+        setKaiwaList([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+    loadKaiwa();
+  }, []);
+
   const filteredKaiwa = (
     selectedLevel === "Tất cả"
-      ? kaiwaSamples
-      : kaiwaSamples.filter((k) => k.level === selectedLevel)
+      ? kaiwaList
+      : kaiwaList.filter((k) => k.level === selectedLevel)
   ).filter(
-    (k: any) =>
+    (k) =>
       k.title.toLowerCase().includes(search.toLowerCase()) ||
-      k.category.toLowerCase().includes(search.toLowerCase()) ||
+      (k.category || "").toLowerCase().includes(search.toLowerCase()) ||
       k.conversation.some(
-        (line: any) =>
+        (line) =>
           line.jp.includes(search) ||
           (line.vi && line.vi.toLowerCase().includes(search.toLowerCase()))
       )
@@ -474,7 +160,7 @@ export default function KaiwaDailyPage() {
           </div>
           <Card className="border-2 border-rose-100 shadow">
             <CardContent className="p-4 sm:p-6 space-y-4">
-              {selectedKaiwa?.conversation.map((line: any, idx: any) => {
+              {selectedKaiwa?.conversation.map((line, idx) => {
                 const key = `${selectedKaiwa?.id}-${idx}`;
                 const isRight = line.speaker !== "A";
                 return (
@@ -582,7 +268,14 @@ export default function KaiwaDailyPage() {
         </div>
 
         <div className="px-4 sm:px-6 py-6">
-          {pagedKaiwa.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-12">
+              <div className="text-5xl mb-3">🔄</div>
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+                Đang tải hội thoại...
+              </h3>
+            </div>
+          ) : pagedKaiwa.length === 0 ? (
             <div className="text-center py-12">
               <div className="text-5xl mb-3">🔍</div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
@@ -594,7 +287,7 @@ export default function KaiwaDailyPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-4">
-              {pagedKaiwa.map((kaiwa: any) => (
+              {pagedKaiwa.map((kaiwa) => (
                 <Card
                   key={kaiwa.id}
                   className="border hover:border-rose-300 hover:shadow transition-all duration-200 rounded-xl group"

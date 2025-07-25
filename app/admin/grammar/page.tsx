@@ -11,20 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Plus,
-  Save,
-  X,
-  Trash2,
-  Edit,
-  Upload,
-  Download,
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  ArrowDownZA,
-  ArrowUpZA,
-} from "lucide-react";
+import { Plus, Save, X, Trash2, Edit, Upload, Download, ChevronLeft, ChevronRight } from "lucide-react";
 import {
   getGrammars,
   createGrammar,
@@ -35,6 +22,7 @@ import {
   getGrammarExamples,
   importGrammarJson,
   importGrammarCsv,
+  removeGrammarUsage, // Thêm import ở đây
 } from "@/lib/grammar";
 import React from "react";
 import { renderExample } from "../../../common/utils";
@@ -63,25 +51,13 @@ interface GrammarPoint {
 }
 
 const GRAMMAR_PAGE_SIZE = 5;
-const GRAMMAR_SORT_FIELDS = [
-  { value: "id", label: "ID" },
-  { value: "title", label: "Tên" },
-  { value: "level", label: "Cấp độ" },
-  { value: "definition", label: "Định nghĩa" },
-  { value: "description", label: "Mô tả" },
-];
 
 export default function GrammarAdminPage() {
+  // Phân trang cho danh sách điểm ngữ pháp
   const [grammarList, setGrammarList] = useState<GrammarPoint[]>([]);
   const [grammarCount, setGrammarCount] = useState(0);
   const [grammarPage, setGrammarPage] = useState(1);
   const [grammarTotalPages, setGrammarTotalPages] = useState(1);
-
-  // Search & Sort
-  const [search, setSearch] = useState("");
-  const [searchInput, setSearchInput] = useState("");
-  const [sortBy, setSortBy] = useState("id");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(null);
   const [showAddGrammar, setShowAddGrammar] = useState(false);
@@ -92,6 +68,7 @@ export default function GrammarAdminPage() {
     definition: "",
     description: "",
   });
+
   const [showAddUsage, setShowAddUsage] = useState(false);
   const [isAddingUsage, setIsAddingUsage] = useState(false);
   const [editingUsageId, setEditingUsageId] = useState<number | null>(null);
@@ -100,6 +77,7 @@ export default function GrammarAdminPage() {
     meaning: "",
     note: "",
   });
+
   const [showAddExampleUsageId, setShowAddExampleUsageId] = useState<number | null>(null);
   const [isAddingExample, setIsAddingExample] = useState(false);
   const [editingExample, setEditingExample] = useState<{ usageId: number; exampleId: number } | null>(null);
@@ -117,32 +95,22 @@ export default function GrammarAdminPage() {
   const [csvFile, setCSVFile] = useState<File | null>(null);
   const [isImportingCSV, setIsImportingCSV] = useState(false);
 
-  // Lấy danh sách ngữ pháp từ API khi load trang hoặc search/sort thay đổi
+  // Lấy danh sách ngữ pháp từ API khi load trang hoặc chuyển trang
   useEffect(() => {
-    loadGrammars(grammarPage, search, sortBy, sortOrder);
-  }, [grammarPage, search, sortBy, sortOrder]);
+    loadGrammars(grammarPage);
+  }, [grammarPage]);
 
+  // Khi chọn điểm ngữ pháp, load lại usages và ví dụ từ API (nếu cần)
   useEffect(() => {
     if (selectedGrammarId) {
       loadExamplesForGrammar(selectedGrammarId);
     }
   }, [selectedGrammarId]);
 
-  const loadGrammars = async (
-    page: number = 1,
-    searchText: string = "",
-    sortField: string = "id",
-    sortDir: "asc" | "desc" = "asc"
-  ) => {
+  const loadGrammars = async (page: number = 1) => {
     setLoading(true);
     try {
-      const { items, count } = await getGrammars(
-        page,
-        GRAMMAR_PAGE_SIZE,
-        searchText,
-        sortField,
-        sortDir
-      );
+      const { items, count } = await getGrammars(page, GRAMMAR_PAGE_SIZE);
       setGrammarList(
         (items || []).map((g: any) => ({
           ...g,
@@ -199,7 +167,7 @@ export default function GrammarAdminPage() {
         description: newGrammar.description,
       } as any);
       // Reload trang hiện tại
-      loadGrammars(grammarPage, search, sortBy, sortOrder);
+      loadGrammars(grammarPage);
       setNewGrammar({
         title: "",
         level: "N5",
@@ -257,12 +225,13 @@ export default function GrammarAdminPage() {
     }
     setIsImporting(true);
     try {
+      // Gửi dữ liệu lên backend qua API importGrammarJson
       const ok = await importGrammarJson(importText);
       if (ok) {
-        await loadGrammars(grammarPage, search, sortBy, sortOrder);
+        await loadGrammars(grammarPage);
         alert("Đã import ngữ pháp thành công từ JSON!");
         setShowImportModal(false);
-        setImportText("");
+        setImportText('');
       } else {
         alert("Import JSON thất bại!");
       }
@@ -281,9 +250,10 @@ export default function GrammarAdminPage() {
     }
     setIsImportingCSV(true);
     try {
+      // Gửi file lên backend qua API importGrammarCsv
       const ok = await importGrammarCsv(csvFile);
       if (ok) {
-        await loadGrammars(grammarPage, search, sortBy, sortOrder);
+        await loadGrammars(grammarPage);
         alert("Đã import ngữ pháp thành công từ CSV!");
         setShowImportCSVModal(false);
         setCSVFile(null);
@@ -301,7 +271,8 @@ export default function GrammarAdminPage() {
     if (!confirm("Bạn có chắc chắn muốn xoá điểm ngữ pháp này?")) return;
     try {
       await removeGrammar(id);
-      loadGrammars(grammarPage, search, sortBy, sortOrder);
+      // Reload trang hiện tại
+      loadGrammars(grammarPage);
       if (selectedGrammarId === id) setSelectedGrammarId(null);
     } catch (e) {
       alert("Xoá điểm ngữ pháp thất bại");
@@ -351,15 +322,36 @@ export default function GrammarAdminPage() {
     }
   };
 
-  const handleDeleteUsage = (usageId: number) => {
+  // ----------- ĐÂY LÀ HANDLE USAGE XOÁ CŨ ----------
+  // const handleDeleteUsage = (usageId: number) => {
+  //   if (!confirm("Bạn có chắc chắn muốn xoá cách dùng này?")) return;
+  //   setGrammarList((prev) =>
+  //     prev.map((g) =>
+  //       g.id === selectedGrammarId
+  //         ? { ...g, usages: g.usages.filter((u) => u.id !== usageId) }
+  //         : g
+  //     )
+  //   );
+  // };
+
+  // ----------- HANDLE XOÁ SỬ DỤNG API removeGrammarUsage -----------
+  const handleDeleteUsage = async (usageId: number) => {
     if (!confirm("Bạn có chắc chắn muốn xoá cách dùng này?")) return;
-    setGrammarList((prev) =>
-      prev.map((g) =>
-        g.id === selectedGrammarId
-          ? { ...g, usages: g.usages.filter((u) => u.id !== usageId) }
-          : g
-      )
-    );
+    setLoading(true);
+    try {
+      await removeGrammarUsage(usageId);
+      setGrammarList((prev) =>
+        prev.map((g) =>
+          g.id === selectedGrammarId
+            ? { ...g, usages: g.usages.filter((u) => u.id !== usageId) }
+            : g
+        )
+      );
+    } catch (e) {
+      alert("Xoá cách dùng thất bại");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSaveExample = async (usageId: number) => {
@@ -484,108 +476,32 @@ export default function GrammarAdminPage() {
           <p className="text-gray-600">
             Quản lý các điểm ngữ pháp, nhiều cách dùng và ví dụ minh hoạ cho từng cách dùng.
           </p>
-          <div className="flex flex-col md:flex-row md:items-center gap-3 mt-4">
-            <div className="flex flex-1 gap-2 items-center">
-              <Input
-                placeholder="Tìm kiếm ngữ pháp..."
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    setSearch(searchInput);
-                    setGrammarPage(1);
-                  }
-                }}
-                className="max-w-xs"
-              />
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearch(searchInput);
-                  setGrammarPage(1);
-                }}
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Tìm kiếm
-              </Button>
-              {search !== "" && (
-                <Button
-                  variant="ghost"
-                  onClick={() => {
-                    setSearch("");
-                    setSearchInput("");
-                    setGrammarPage(1);
-                  }}
-                  size="sm"
-                  className="ml-2"
-                >
-                  <X className="h-4 w-4" />
-                  Xoá
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2 items-center">
-              <label htmlFor="sortBy" className="text-sm text-gray-600">
-                Sắp xếp:
-              </label>
-              <select
-                id="sortBy"
-                value={sortBy}
-                onChange={(e) => {
-                  setSortBy(e.target.value);
-                  setGrammarPage(1);
-                }}
-                className="border rounded px-2 py-1 text-sm"
-              >
-                {GRAMMAR_SORT_FIELDS.map((field) => (
-                  <option key={field.value} value={field.value}>
-                    {field.label}
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
-                  setGrammarPage(1);
-                }}
-                title={sortOrder === "asc" ? "Tăng dần" : "Giảm dần"}
-              >
-                {sortOrder === "asc" ? (
-                  <ArrowUpZA className="h-4 w-4" />
-                ) : (
-                  <ArrowDownZA className="h-4 w-4" />
-                )}
-              </Button>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setShowImportModal(true)}
-                variant="outline"
-                className="border-blue-500 text-blue-600 hover:bg-blue-50"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import JSON
-              </Button>
-              <Button
-                onClick={() => setShowImportCSVModal(true)}
-                variant="outline"
-                className="border-purple-500 text-purple-600 hover:bg-purple-50"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                Import CSV
-              </Button>
-              <Button
-                onClick={handleExportJSON}
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50"
-                disabled={grammarList.length === 0}
-              >
-                <Download className="h-4 w-4 mr-2" />
-                Export JSON
-              </Button>
-            </div>
+          <div className="flex gap-3 mt-4">
+            <Button
+              onClick={() => setShowImportModal(true)}
+              variant="outline"
+              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import JSON
+            </Button>
+            <Button
+              onClick={() => setShowImportCSVModal(true)}
+              variant="outline"
+              className="border-purple-500 text-purple-600 hover:bg-purple-50"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import CSV
+            </Button>
+            <Button
+              onClick={handleExportJSON}
+              variant="outline"
+              className="border-green-500 text-green-600 hover:bg-green-50"
+              disabled={grammarList.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export JSON
+            </Button>
           </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
@@ -677,11 +593,10 @@ export default function GrammarAdminPage() {
                 {grammarList.map((g) => (
                   <div
                     key={g.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex-shrink-0 ${
-                      selectedGrammarId === g.id
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex-shrink-0 ${selectedGrammarId === g.id
                         ? "border-yellow-500 bg-yellow-50"
                         : "border-gray-200 hover:border-gray-300"
-                    }`}
+                      }`}
                     onClick={() => setSelectedGrammarId(g.id)}
                   >
                     <div className="flex items-center justify-between">

@@ -19,12 +19,16 @@ import {
   Edit,
   Upload,
   Download,
+  Search,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   fetchConversations,
   createConversation,
   updateConversation,
   deleteConversation,
+  createConversationJson, // <-- Thêm import này!
   Conversation,
   CreateConversationInput,
 } from "@/lib/conversation";
@@ -71,16 +75,27 @@ export default function KaiwaAdminPage() {
   const [importText, setImportText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
 
-  // Fetch conversations on mount
+  // Search & sort
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"asc" | "desc">("desc");
+
+  // Fetch conversations on mount and when search/sort changes
   useEffect(() => {
     const loadConversations = async () => {
       try {
         setLoading(true);
-        const conversations = await fetchConversations();
-        setKaiwaList(conversations.map((conv: Conversation) => ({
-          ...conv,
-          conversation: Array.isArray(conv.conversation) ? conv.conversation : [],
-        })));
+        const conversations = await fetchConversations({ search, sort });
+        setKaiwaList(
+          conversations.map((conv: Conversation) => ({
+            id: conv.id,
+            title: conv.title,
+            level: conv.level,
+            category: conv.category,
+            duration: conv.duration ?? "5 phút",
+            conversation: Array.isArray(conv.conversation) ? conv.conversation : [],
+          }))
+        );
       } catch (error) {
         console.error("Error fetching conversations:", error);
         alert("Lỗi khi tải danh sách hội thoại");
@@ -89,7 +104,7 @@ export default function KaiwaAdminPage() {
       }
     };
     loadConversations();
-  }, []);
+  }, [search, sort]);
 
   // Thêm kaiwa mới
   const handleAddKaiwa = async () => {
@@ -102,15 +117,23 @@ export default function KaiwaAdminPage() {
     try {
       const input: CreateConversationInput = {
         ...newKaiwa,
+        duration: newKaiwa.duration || "5 phút",
         conversation: [],
       };
       const newConversation = await createConversation(input);
-      setKaiwaList([...kaiwaList, {
-        ...newConversation,
-        conversation: Array.isArray(newConversation.conversation) 
-          ? newConversation.conversation 
-          : [],
-      }]);
+      setKaiwaList([
+        ...kaiwaList,
+        {
+          id: newConversation.id,
+          title: newConversation.title,
+          level: newConversation.level,
+          category: newConversation.category,
+          duration: newConversation.duration ?? "5 phút",
+          conversation: Array.isArray(newConversation.conversation)
+            ? newConversation.conversation
+            : [],
+        },
+      ]);
       setNewKaiwa({ title: "", level: "N5", category: "", duration: "" });
       setShowAddKaiwa(false);
     } catch (error) {
@@ -154,9 +177,10 @@ export default function KaiwaAdminPage() {
         );
       } else {
         // Add new line
-        const newId = selectedKaiwa.conversation.length > 0
-          ? Math.max(...selectedKaiwa.conversation.map((c) => c.id)) + 1
-          : 1;
+        const newId =
+          selectedKaiwa.conversation.length > 0
+            ? Math.max(...selectedKaiwa.conversation.map((c) => c.id)) + 1
+            : 1;
         updatedConversation = [
           ...selectedKaiwa.conversation,
           { id: newId, ...conversationForm },
@@ -171,7 +195,12 @@ export default function KaiwaAdminPage() {
       setKaiwaList((prev) =>
         prev.map((k) =>
           k.id === selectedKaiwaId
-            ? { ...k, conversation: updatedKaiwa.conversation }
+            ? {
+                ...k,
+                conversation: Array.isArray(updatedKaiwa.conversation)
+                  ? updatedKaiwa.conversation
+                  : [],
+              }
             : k
         )
       );
@@ -204,7 +233,12 @@ export default function KaiwaAdminPage() {
       setKaiwaList((prev) =>
         prev.map((k) =>
           k.id === selectedKaiwaId
-            ? { ...k, conversation: updatedKaiwa.conversation }
+            ? {
+                ...k,
+                conversation: Array.isArray(updatedKaiwa.conversation)
+                  ? updatedKaiwa.conversation
+                  : [],
+              }
             : k
         )
       );
@@ -214,7 +248,7 @@ export default function KaiwaAdminPage() {
     }
   };
 
-  // Import JSON kaiwa
+  // Import JSON kaiwa (sử dụng mutation createConversationJson cho import hàng loạt)
   const handleImportJSON = async () => {
     if (!importText.trim()) {
       alert("Vui lòng nhập dữ liệu JSON");
@@ -248,34 +282,24 @@ export default function KaiwaAdminPage() {
         }
       }
 
-      const importedKaiwas: KaiwaPoint[] = [];
-      for (const kaiwa of data) {
-        const input: CreateConversationInput = {
-          title: kaiwa.title,
-          level: kaiwa.level,
-          category: kaiwa.category,
-          duration: kaiwa.duration || "5 phút",
-          conversation: kaiwa.conversation.map((line: any, index: number) => ({
-            id: index + 1,
-            speaker: line.speaker,
-            jp: line.jp,
-            romaji: line.romaji || "",
-            vi: line.vi,
-          })),
-        };
-        const newConversation = await createConversation(input);
-        importedKaiwas.push({
-          ...newConversation,
-          conversation: Array.isArray(newConversation.conversation)
-            ? newConversation.conversation
-            : [],
-        });
-      }
+      // Gọi mutation import hàng loạt
+      await createConversationJson(JSON.stringify(data));
+      // Reload lại danh sách kaiwa sau khi import
+      const conversations = await fetchConversations({ search, sort });
+      setKaiwaList(
+        conversations.map((conv: Conversation) => ({
+          id: conv.id,
+          title: conv.title,
+          level: conv.level,
+          category: conv.category,
+          duration: conv.duration ?? "5 phút",
+          conversation: Array.isArray(conv.conversation) ? conv.conversation : [],
+        }))
+      );
 
-      setKaiwaList([...kaiwaList, ...importedKaiwas]);
       setImportText("");
       setShowImportModal(false);
-      alert(`Đã import thành công ${importedKaiwas.length} bài kaiwa!`);
+      alert(`Đã import thành công ${data.length} bài kaiwa!`);
     } catch (error: any) {
       console.error("Error importing JSON:", error);
       alert(`Lỗi import: ${error.message}`);
@@ -358,6 +382,65 @@ export default function KaiwaAdminPage() {
               <Download className="h-4 w-4 mr-2" />
               Export JSON
             </Button>
+          </div>
+
+          {/* Search & Sort UI */}
+          <div className="flex gap-2 mt-6 items-center">
+            <div className="flex items-center bg-white border rounded px-2 py-1 w-full max-w-md">
+              <Search className="h-4 w-4 text-gray-400 mr-2" />
+              <Input
+                className="border-none outline-none shadow-none p-0"
+                placeholder="Tìm bài hội thoại theo tên..."
+                value={searchInput}
+                onChange={e => setSearchInput(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === "Enter") setSearch(searchInput);
+                }}
+              />
+              {search && (
+                <Button
+                  size="default"
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch("");
+                    setSearchInput("");
+                  }}
+                  className="ml-2"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
+              <Button
+                size="sm"
+                variant="outline"
+                className="ml-2"
+                onClick={() => setSearch(searchInput)}
+                disabled={!searchInput}
+              >
+                Tìm
+              </Button>
+            </div>
+            <div className="flex items-center ml-2">
+              <span className="mr-1 text-sm text-gray-600">Sắp xếp:</span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSort(sort === "asc" ? "desc" : "asc")}
+                className="px-2"
+              >
+                {sort === "asc" ? (
+                  <>
+                    <ChevronUp className="h-4 w-4 mr-1" />
+                    Cũ nhất
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4 mr-1" />
+                    Mới nhất
+                  </>
+                )}
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -499,23 +582,6 @@ export default function KaiwaAdminPage() {
                       : "Chọn bài hội thoại để xem chi tiết"}
                   </CardDescription>
                 </div>
-                {selectedKaiwa && (
-                  <Button
-                    onClick={() => {
-                      setShowAddConversation(true);
-                      setEditingConversationId(null);
-                      setConversationForm({
-                        speaker: "A",
-                        jp: "",
-                        romaji: "",
-                        vi: "",
-                      });
-                    }}
-                    size="sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Thêm dòng hội thoại
-                  </Button>
-                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -620,7 +686,7 @@ export default function KaiwaAdminPage() {
                     )}
                     {selectedKaiwa.conversation.map((line, idx) => (
                       <div
-                        key={line.id}
+                        key={line.id ?? idx}
                         className={`p-4 border rounded-lg ${
                           line.speaker === "A"
                             ? "bg-blue-50 border-blue-200"
@@ -656,33 +722,6 @@ export default function KaiwaAdminPage() {
                                 {line.vi}
                               </div>
                             </div>
-                          </div>
-                          <div className="flex gap-1 ml-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                setShowAddConversation(true);
-                                setEditingConversationId(line.id);
-                                setConversationForm({
-                                  speaker: line.speaker,
-                                  jp: line.jp,
-                                  romaji: line.romaji,
-                                  vi: line.vi,
-                                });
-                              }}
-                              title="Sửa dòng hội thoại"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteConversation(line.id)}
-                              title="Xoá dòng hội thoại"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
                           </div>
                         </div>
                       </div>

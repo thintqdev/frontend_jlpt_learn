@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
-import { Card, CardContent } from "@/components/ui/card";
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/app-layout";
-import { MessageCircle, Volume2, User, Play, RotateCcw } from "lucide-react";
+import { Volume2, User, Play, RotateCcw } from "lucide-react";
+import { getConversationById, Conversation } from "@/lib/conversation";
 
-// Định nghĩa type cho hội thoại
+// Nếu muốn dùng Framer Motion cho animation
+import { AnimatePresence, motion } from "framer-motion";
+
 interface KaiwaLine {
   speaker: string;
   jp: string;
@@ -19,381 +21,63 @@ interface Kaiwa {
   id: number;
   title: string;
   level: string;
+  category?: string;
+  duration?: string;
   conversation: KaiwaLine[];
 }
 
-// Dữ liệu kaiwa mẫu (có thể import từ file riêng nếu cần)
-const kaiwaSamples = [
-    {
-      id: 1,
-      title: "Chào buổi sáng",
-      level: "N5",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "おはようございます。",
-          romaji: "Ohayou gozaimasu.",
-          vi: "Chào buổi sáng.",
-        },
-        {
-          speaker: "B",
-          jp: "おはよう。元気？",
-          romaji: "Ohayou. Genki?",
-          vi: "Chào buổi sáng. Khỏe không?",
-        },
-        {
-          speaker: "A",
-          jp: "はい、元気です。",
-          romaji: "Hai, genki desu.",
-          vi: "Vâng, tôi khỏe.",
-        },
-      ],
-    },
-    {
-      id: 2,
-      title: "Đi mua sắm",
-      level: "N5",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "これ、いくらですか。",
-          romaji: "Kore, ikura desu ka?",
-          vi: "Cái này bao nhiêu tiền vậy?",
-        },
-        {
-          speaker: "B",
-          jp: "500円です。",
-          romaji: "Go-hyaku en desu.",
-          vi: "500 yên ạ.",
-        },
-        {
-          speaker: "A",
-          jp: "じゃあ、これをください。",
-          romaji: "Jaa, kore o kudasai.",
-          vi: "Vậy, cho tôi cái này nhé.",
-        },
-      ],
-    },
-    {
-      id: 3,
-      title: "Hỏi đường",
-      level: "N4",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "すみません、駅はどこですか。",
-          vi: "Xin lỗi, nhà ga ở đâu vậy?",
-        },
-        {
-          speaker: "B",
-          jp: "まっすぐ行って、右に曲がってください。",
-          vi: "Đi thẳng rồi rẽ phải nhé.",
-        },
-      ],
-    },
-    {
-      id: 4,
-      title: "Gọi món ở nhà hàng",
-      level: "N5",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "すみません、メニューをください。",
-          vi: "Xin lỗi, cho tôi xem thực đơn.",
-        },
-        { speaker: "B", jp: "はい、どうぞ。", vi: "Vâng, mời bạn." },
-        {
-          speaker: "A",
-          jp: "このラーメンを一つお願いします。",
-          vi: "Cho tôi một tô mì ramen này.",
-        },
-      ],
-    },
-    {
-      id: 5,
-      title: "Hẹn gặp bạn",
-      level: "N4",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "明日、何時に会いましょうか。",
-          vi: "Ngày mai, mấy giờ mình gặp nhau?",
-        },
-        {
-          speaker: "B",
-          jp: "午後2時はどうですか。",
-          vi: "2 giờ chiều được không?",
-        },
-        { speaker: "A", jp: "いいですね。", vi: "Được đấy." },
-      ],
-    },
-    {
-      id: 6,
-      title: "Mua vé tàu",
-      level: "N4",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "新幹線の切符を買いたいです。",
-          vi: "Tôi muốn mua vé tàu shinkansen.",
-        },
-        { speaker: "B", jp: "どこまで行きますか。", vi: "Bạn đi đến đâu?" },
-        { speaker: "A", jp: "東京までです。", vi: "Đến Tokyo." },
-      ],
-    },
-    {
-      id: 7,
-      title: "Đi khám bệnh",
-      level: "N3",
-      conversation: [
-        { speaker: "A", jp: "頭が痛いです。", vi: "Tôi bị đau đầu." },
-        { speaker: "B", jp: "熱はありますか。", vi: "Bạn có bị sốt không?" },
-        { speaker: "A", jp: "はい、少しあります。", vi: "Vâng, tôi hơi sốt." },
-      ],
-    },
-    {
-      id: 8,
-      title: "Xin nghỉ phép",
-      level: "N3",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "来週、休みを取りたいです。",
-          vi: "Tuần sau tôi muốn xin nghỉ.",
-        },
-        { speaker: "B", jp: "何日間ですか。", vi: "Bạn nghỉ mấy ngày?" },
-        { speaker: "A", jp: "三日間です。", vi: "Ba ngày." },
-      ],
-    },
-    {
-      id: 9,
-      title: "Nhận bưu kiện",
-      level: "N2",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "荷物を受け取りたいです。",
-          vi: "Tôi muốn nhận bưu kiện.",
-        },
-        {
-          speaker: "B",
-          jp: "お名前を教えてください。",
-          vi: "Bạn cho tôi biết tên nhé.",
-        },
-        { speaker: "A", jp: "グエンです。", vi: "Tôi là Nguyễn." },
-      ],
-    },
-    {
-      id: 10,
-      title: "Phỏng vấn xin việc",
-      level: "N2",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "自己紹介をお願いします。",
-          vi: "Bạn hãy giới thiệu bản thân.",
-        },
-        {
-          speaker: "B",
-          jp: "グエンと申します。ベトナムから来ました。",
-          vi: "Tôi tên là Nguyễn, đến từ Việt Nam.",
-        },
-        {
-          speaker: "A",
-          jp: "よろしくお願いします。",
-          vi: "Rất mong được giúp đỡ.",
-        },
-      ],
-    },
-    {
-      id: 11,
-      title: "Thảo luận dự án",
-      level: "N1",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "このプロジェクトの進捗はどうですか。",
-          vi: "Tiến độ dự án này thế nào rồi?",
-        },
-        {
-          speaker: "B",
-          jp: "順調に進んでいます。",
-          vi: "Mọi việc tiến triển tốt.",
-        },
-        { speaker: "A", jp: "何か問題はありますか。", vi: "Có vấn đề gì không?" },
-      ],
-    },
-    {
-      id: 12,
-      title: "Bàn về thời tiết",
-      level: "N5",
-      conversation: [
-        { speaker: "A", jp: "今日は暑いですね。", vi: "Hôm nay nóng nhỉ." },
-        {
-          speaker: "B",
-          jp: "そうですね。夏が来ました。",
-          vi: "Đúng vậy, mùa hè đến rồi.",
-        },
-      ],
-    },
-    {
-      id: 13,
-      title: "Gọi taxi",
-      level: "N4",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "タクシーを呼んでください。",
-          vi: "Làm ơn gọi giúp tôi taxi.",
-        },
-        { speaker: "B", jp: "どこまで行きますか。", vi: "Bạn đi đến đâu?" },
-        { speaker: "A", jp: "駅までお願いします。", vi: "Đến nhà ga giúp tôi." },
-      ],
-    },
-    {
-      id: 14,
-      title: "Đặt phòng khách sạn",
-      level: "N3",
-      conversation: [
-        { speaker: "A", jp: "部屋を予約したいです。", vi: "Tôi muốn đặt phòng." },
-        { speaker: "B", jp: "何名様ですか。", vi: "Quý khách đi mấy người?" },
-        { speaker: "A", jp: "二人です。", vi: "Hai người." },
-      ],
-    },
-    {
-      id: 15,
-      title: "Cuộc hẹn ở quán cà phê",
-      level: "N3",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "こんにちは、遅れてごめんね。",
-          vi: "Xin chào, xin lỗi mình đến muộn.",
-        },
-        {
-          speaker: "B",
-          jp: "大丈夫だよ。今来たところ。",
-          vi: "Không sao đâu. Mình cũng vừa mới đến.",
-        },
-        { speaker: "A", jp: "何を飲みたい？", vi: "Bạn muốn uống gì?" },
-        {
-          speaker: "B",
-          jp: "コーヒーにしようかな。",
-          vi: "Chắc mình sẽ uống cà phê.",
-        },
-        {
-          speaker: "A",
-          jp: "私も同じのを頼むね。",
-          vi: "Mình cũng gọi giống bạn nhé.",
-        },
-        {
-          speaker: "B",
-          jp: "最近どう？忙しい？",
-          vi: "Dạo này bạn thế nào? Bận không?",
-        },
-        {
-          speaker: "A",
-          jp: "ちょっと忙しいけど、元気だよ。",
-          vi: "Cũng hơi bận nhưng mình vẫn khỏe.",
-        },
-      ],
-    },
-    {
-      id: 16,
-      title: "Thảo luận về du lịch",
-      level: "N2",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "夏休みにどこか行く予定ある？",
-          vi: "Kỳ nghỉ hè này bạn có dự định đi đâu không?",
-        },
-        {
-          speaker: "B",
-          jp: "北海道に行きたいと思ってる。",
-          vi: "Mình định đi Hokkaido.",
-        },
-        {
-          speaker: "A",
-          jp: "いいね！何日ぐらい行くの？",
-          vi: "Hay quá! Bạn đi mấy ngày?",
-        },
-        { speaker: "B", jp: "5日間の予定だよ。", vi: "Dự định đi 5 ngày." },
-        {
-          speaker: "A",
-          jp: "美味しいものたくさん食べてきてね。",
-          vi: "Nhớ ăn nhiều món ngon nhé.",
-        },
-        {
-          speaker: "B",
-          jp: "もちろん！写真もたくさん撮るよ。",
-          vi: "Tất nhiên rồi! Mình sẽ chụp nhiều ảnh nữa.",
-        },
-      ],
-    },
-    {
-      id: 17,
-      title: "Phàn nàn về dịch vụ",
-      level: "N1",
-      conversation: [
-        {
-          speaker: "A",
-          jp: "すみません、注文した料理がまだ来ていません。",
-          vi: "Xin lỗi, món tôi gọi vẫn chưa được mang ra.",
-        },
-        {
-          speaker: "B",
-          jp: "申し訳ありません。すぐに確認いたします。",
-          vi: "Xin lỗi quý khách. Tôi sẽ kiểm tra ngay.",
-        },
-        {
-          speaker: "A",
-          jp: "もう30分も待っています。",
-          vi: "Tôi đã đợi 30 phút rồi.",
-        },
-        {
-          speaker: "B",
-          jp: "大変ご迷惑をおかけしました。",
-          vi: "Thành thật xin lỗi vì đã làm phiền quý khách.",
-        },
-        {
-          speaker: "A",
-          jp: "できれば早くお願いします。",
-          vi: "Nếu được thì làm ơn mang ra nhanh giúp tôi.",
-        },
-        {
-          speaker: "B",
-          jp: "かしこまりました。すぐにお持ちします。",
-          vi: "Vâng, tôi sẽ mang ra ngay.",
-        },
-      ],
-    },
-];
+const LEVEL_COLOR: Record<string, string> = {
+  N5: "bg-green-100 text-green-700 border-green-200",
+  N4: "bg-blue-100 text-blue-700 border-blue-200",
+  N3: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  N2: "bg-orange-100 text-orange-700 border-orange-200",
+  N1: "bg-red-100 text-red-700 border-red-200",
+};
+
+const speakerColors: Record<string, string> = {
+  A: "from-indigo-200 to-sky-100",
+  B: "from-pink-200 to-rose-100",
+  C: "from-yellow-200 to-orange-100",
+  D: "from-green-200 to-lime-100",
+};
 
 export default function KaiwaDetailPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  // Sử dụng useParams để lấy id từ URL
   const params = useParams();
   const id = Number(params?.id);
-  const kaiwa: Kaiwa | undefined = kaiwaSamples.find((k) => k.id === id);
+
+  const [kaiwa, setKaiwa] = useState<Kaiwa | null>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [practiceMode, setPracticeMode] = useState<boolean>(false);
   const [showMeanings, setShowMeanings] = useState<{ [key: string]: boolean }>({});
+  const [animateKey, setAnimateKey] = useState<number>(0);
 
-  if (!kaiwa) {
-    return (
-      <AppLayout>
-        <div className="min-h-screen flex flex-col items-center justify-center">
-          <h2 className="text-xl font-bold mb-2">Không tìm thấy hội thoại</h2>
-          <Button onClick={() => router.push("/kaiwa")}>Quay lại danh sách</Button>
-        </div>
-      </AppLayout>
-    );
-  }
+  useEffect(() => {
+    async function fetchKaiwa() {
+      setLoading(true);
+      try {
+        const conv: Conversation = await getConversationById(id);
+        setKaiwa({
+          id: conv.id,
+          title: conv.title,
+          level: conv.level,
+          category: conv.category,
+          duration: conv.duration ?? "5 phút",
+          conversation: Array.isArray(conv.conversation)
+            ? conv.conversation
+            : [],
+        });
+      } catch (err) {
+        setKaiwa(null);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (id) fetchKaiwa();
+  }, [id]);
 
-  // Hàm phát âm tiếng Nhật sử dụng API server
   async function speakJapanese(text: string) {
     try {
       const res = await fetch("/api/tts", {
@@ -412,60 +96,92 @@ export default function KaiwaDetailPage() {
     }
   }
 
-  // Lấy danh sách vai trong hội thoại
-  const roles: string[] = Array.from(new Set(kaiwa.conversation.map((line) => line.speaker)));
+  const roles: string[] =
+    kaiwa && kaiwa.conversation
+      ? Array.from(new Set(kaiwa.conversation.map((line) => line.speaker)))
+      : [];
 
-  // Bắt đầu chế độ luyện tập
   const startPractice = () => {
     if (!selectedRole) return;
     setPracticeMode(true);
     setCurrentStep(0);
+    setAnimateKey(0);
   };
-
-  // Reset chế độ luyện tập
   const resetPractice = () => {
     setPracticeMode(false);
     setCurrentStep(0);
     setShowMeanings({});
+    setAnimateKey(0);
   };
 
-  // Câu tiếp theo trong hội thoại
   const nextStep = () => {
-    if (currentStep < kaiwa.conversation.length - 1) {
-      setCurrentStep(currentStep + 1);
+    if (currentStep < (kaiwa?.conversation.length ?? 0) - 1) {
+      setCurrentStep((step) => {
+        setAnimateKey(step + 1);
+        return step + 1;
+      });
     }
   };
-
-  // Câu trước đó trong hội thoại
   const prevStep = () => {
     if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
+      setCurrentStep((step) => {
+        setAnimateKey(step - 1);
+        return step - 1;
+      });
     }
   };
 
-  // Câu hiện tại
-  const currentLine = kaiwa.conversation[currentStep];
+  const currentLine =
+    kaiwa && kaiwa.conversation ? kaiwa.conversation[currentStep] : undefined;
   const isMyTurn = currentLine && currentLine.speaker === selectedRole;
+
+  // Animation variants
+  const bubbleVariants = {
+    initial: { opacity: 0, y: 40, scale: 0.97 },
+    enter: { opacity: 1, y: 0, scale: 1, transition: { duration: 0.3 } },
+    exit: { opacity: 0, y: -40, scale: 0.97, transition: { duration: 0.2 } },
+  };
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-100 to-rose-100">
+          <div className="animate-spin h-10 w-10 rounded-full border-b-2 border-primary-500 mb-4"></div>
+          <h2 className="text-xl font-bold mb-2">Đang tải hội thoại...</h2>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (!kaiwa) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-100 to-rose-100">
+          <h2 className="text-xl font-bold mb-2">Không tìm thấy hội thoại</h2>
+          <Button onClick={() => router.push("/kaiwa")}>Quay lại danh sách</Button>
+        </div>
+      </AppLayout>
+    );
+  }
 
   return (
     <AppLayout>
-      <div className="bg-white min-h-screen">
+      <div className="bg-gradient-to-br from-indigo-50 to-rose-50 min-h-screen">
         <div className="px-6 pt-10 pb-6 border-b border-gray-100 flex items-center space-x-4">
-          <Button variant="outline" size="icon" onClick={() => router.push("/kaiwa")}>←</Button>
-          <h1 className="text-2xl font-bold text-gray-900 flex-1">{kaiwa.title}</h1>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => router.push("/kaiwa")}
+            className="hover:bg-indigo-100 transition"
+          >
+            ←
+          </Button>
+          <h1 className="text-2xl font-bold text-gray-900 flex-1">
+            {kaiwa.title}
+          </h1>
           <Badge
             variant="secondary"
-            className={
-              kaiwa.level === "N5"
-                ? "bg-green-100 text-green-700"
-                : kaiwa.level === "N4"
-                ? "bg-blue-100 text-blue-700"
-                : kaiwa.level === "N3"
-                ? "bg-yellow-100 text-yellow-700"
-                : kaiwa.level === "N2"
-                ? "bg-orange-100 text-orange-700"
-                : "bg-red-100 text-red-700"
-            }
+            className={LEVEL_COLOR[kaiwa.level] || "bg-gray-100 text-gray-700 border-gray-200"}
           >
             {kaiwa.level}
           </Badge>
@@ -473,102 +189,135 @@ export default function KaiwaDetailPage() {
         <div className="px-4 sm:px-8 py-6 max-w-2xl mx-auto">
           {!practiceMode ? (
             <>
-              {/* Chọn vai */}
-              <div className="mb-6">
-                <div className="font-semibold mb-2">Chọn vai để luyện nói:</div>
-                <div className="flex space-x-3 mb-4">
-                  {roles.map((role: string) => (
-                    <Button
-                      key={role}
-                      variant={selectedRole === role ? "default" : "outline"}
-                      onClick={() => setSelectedRole(role)}
-                      className={
-                        selectedRole === role
-                          ? "bg-primary-600 hover:bg-primary-700"
-                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                      }
-                    >
-                      <User className="w-4 h-4 mr-1" /> Vai {role}
-                    </Button>
-                  ))}
-                </div>
-                {selectedRole && (
-                  <Button
-                    onClick={startPractice}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <Play className="w-4 h-4 mr-2" />
-                    Bắt đầu luyện tập
-                  </Button>
-                )}
-              </div>
-
-              {/* Hiển thị toàn bộ hội thoại */}
-              <div className="mb-4 font-semibold">Toàn bộ hội thoại:</div>
-              <div className="space-y-3">
-                {kaiwa.conversation.map((line: KaiwaLine, idx: number) => {
-                  const isRight = line.speaker !== roles[0];
-                  return (
-                    <div
-                      key={idx}
-                      className={`flex ${isRight ? "justify-end" : "justify-start"} flex-col items-stretch`}
-                    >
-                      <div
-                        className={`max-w-[90%] rounded-2xl px-4 py-3 mb-1 shadow-sm text-base flex flex-col relative border border-primary-100
-                          ${isRight ? "text-right bg-blue-50 rounded-br-3xl ml-auto" : "text-left bg-primary-50 rounded-bl-3xl"}
-                        `}
+              <motion.div
+                initial={{ opacity: 0, y: 40 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
+                <div className="mb-6">
+                  <div className="font-semibold mb-2 text-lg text-gray-900">Chọn vai để luyện nói:</div>
+                  <div className="flex space-x-3 mb-4">
+                    {roles.map((role: string) => (
+                      <Button
+                        key={role}
+                        variant={selectedRole === role ? "default" : "outline"}
+                        onClick={() => setSelectedRole(role)}
+                        className={`rounded-full shadow-sm px-5 py-2 text-base ${
+                          selectedRole === role
+                            ? "bg-primary-600 hover:bg-primary-700"
+                            : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                        }`}
                       >
-                        <div className="flex items-center mb-1">
-                          <span
-                            className={`font-semibold mr-2 ${isRight ? "text-blue-600" : "text-primary-600"}`}
-                          >
-                            {line.speaker}:
-                          </span>
-                          <span className="japanese-text text-base font-medium break-words">{line.jp}</span>
-                          <button
-                            className="ml-2 p-1 rounded-full hover:bg-primary-100 focus:outline-none"
-                            title="Phát âm"
-                            type="button"
-                            onClick={() => speakJapanese(line.jp)}
-                          >
-                            <Volume2 className="w-4 h-4 text-primary-500" />
-                          </button>
-                        </div>
-                        {line.romaji && (
-                          <div className="text-xs text-gray-500 mb-1">{line.romaji}</div>
-                        )}
-                        <button
-                          className="text-xs text-primary-600 underline self-end mt-1 focus:outline-none font-semibold"
-                          onClick={() =>
-                            setShowMeanings((prev) => ({
-                              ...prev,
-                              ["all-" + idx]: !prev["all-" + idx],
-                            }))
-                          }
-                          type="button"
+                        <User className="w-4 h-4 mr-1" /> Vai {role}
+                      </Button>
+                    ))}
+                  </div>
+                  {selectedRole && (
+                    <Button
+                      onClick={startPractice}
+                      className="bg-gradient-to-r from-primary-500 to-green-600 hover:from-primary-600 hover:to-green-700 text-white px-6 py-2 text-base shadow rounded-full"
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Bắt đầu luyện tập
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+              <motion.div
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div className="mb-4 font-semibold text-lg text-gray-900">
+                  Toàn bộ hội thoại:
+                </div>
+                <div className="space-y-3">
+                  <AnimatePresence>
+                    {kaiwa.conversation.map((line: KaiwaLine, idx: number) => {
+                      const isRight = line.speaker !== roles[0];
+                      const key = "all-" + idx;
+                      return (
+                        <motion.div
+                          key={idx}
+                          initial="initial"
+                          animate="enter"
+                          exit="exit"
+                          variants={bubbleVariants}
+                          className={`flex ${isRight ? "justify-end" : "justify-start"} flex-col items-stretch`}
                         >
-                          {showMeanings["all-" + idx] ? "Ẩn nghĩa" : "Hiện nghĩa"}
-                        </button>
-                      </div>
-                      {showMeanings["all-" + idx] && (
-                        <div
-                          className={`text-xs text-gray-800 mt-1 px-3 pt-1 ${isRight ? "text-right" : "text-left"} font-medium rounded-b-xl border border-primary-50`}
-                        >
-                          {line.vi}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+                          <motion.div
+                            layout
+                            className={`max-w-[95%] rounded-2xl px-6 py-4 mb-1 shadow-lg transition-all duration-200 border-2 
+                            bg-gradient-to-tr ${
+                              speakerColors[line.speaker] ||
+                              "from-gray-100 to-gray-50"
+                            }`}
+                          >
+                            <div className="flex items-center mb-1 gap-2">
+                              <Badge
+                                className={`text-xs px-2 py-1 font-medium rounded-full shadow-sm ${
+                                  isRight
+                                    ? "bg-pink-200 text-pink-800"
+                                    : "bg-indigo-200 text-indigo-800"
+                                }`}
+                              >
+                                {line.speaker}
+                              </Badge>
+                              <span className="japanese-text text-lg font-bold tracking-wide">
+                                {line.jp}
+                              </span>
+                              <button
+                                className="ml-2 p-2 rounded-full hover:bg-gray-200 transition"
+                                title="Nghe tiếng Nhật"
+                                type="button"
+                                onClick={() => speakJapanese(line.jp)}
+                              >
+                                <Volume2 className="w-5 h-5 text-indigo-500" />
+                              </button>
+                            </div>
+                            {line.romaji && (
+                              <div className="text-sm text-gray-600 italic mb-1">{line.romaji}</div>
+                            )}
+                            <motion.button
+                              whileTap={{ scale: 0.95 }}
+                              className={`text-sm underline font-semibold mt-2 ${isRight ? "text-pink-600" : "text-indigo-600"}`}
+                              onClick={() => setShowMeanings((prev) => ({ ...prev, [key]: !prev[key] }))}
+                              type="button"
+                            >
+                              {showMeanings[key] ? "Ẩn nghĩa" : "Xem nghĩa"}
+                            </motion.button>
+                            <AnimatePresence>
+                              {showMeanings[key] && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: 10 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  exit={{ opacity: 0, y: 10 }}
+                                  className="mt-2 text-sm text-gray-700 bg-white rounded p-2 shadow-inner border border-gray-200"
+                                >
+                                  {line.vi}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </motion.div>
+                        </motion.div>
+                      );
+                    })}
+                  </AnimatePresence>
+                </div>
+              </motion.div>
             </>
           ) : (
-            /* Chế độ luyện tập tương tác */
-            <div className="space-y-6">
-              {/* Header */}
+            <motion.div
+              key={animateKey}
+              initial={{ opacity: 0, scale: 0.98, y: 40 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.98, y: -40 }}
+              transition={{ duration: 0.35 }}
+              className="space-y-6"
+            >
               <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-semibold">Chế độ luyện tập - Vai {selectedRole}</h2>
+                  <h2 className="text-lg font-bold text-primary-700">Chế độ luyện tập - Vai {selectedRole}</h2>
                   <p className="text-sm text-gray-600">
                     Bước {currentStep + 1}/{kaiwa.conversation.length}
                   </p>
@@ -576,26 +325,39 @@ export default function KaiwaDetailPage() {
                 <Button
                   variant="outline"
                   onClick={resetPractice}
-                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  className="text-red-600 border-red-200 hover:bg-red-50 rounded-full shadow-sm"
                 >
                   <RotateCcw className="w-4 h-4 mr-2" />
                   Kết thúc
                 </Button>
               </div>
-
-              {/* Câu hiện tại */}
-              <div className="bg-white border-2 border-gray-200 rounded-2xl p-6">
+              <motion.div
+                key={currentStep}
+                initial={{ opacity: 0, scale: 0.97, y: 30 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.97, y: -30 }}
+                transition={{ duration: 0.25 }}
+                className="bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-lg relative overflow-hidden"
+              >
                 {isMyTurn ? (
-                  /* Lượt của tôi */
                   <div className="text-center">
-                    <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
-                      <p className="text-green-700 font-semibold mb-2">🎯 Lượt của bạn!</p>
+                    <motion.div
+                      initial={{ scale: 0.98, opacity: 0.8 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4 }}
+                      className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4"
+                    >
+                      <p className="text-green-700 font-bold mb-2">🎯 Lượt của bạn!</p>
                       <p className="text-sm text-green-600">Hãy nói câu này:</p>
-                    </div>
-                    
-                    <div className="bg-primary-50 rounded-xl p-4">
+                    </motion.div>
+                    <motion.div
+                      initial={{ scale: 0.98, opacity: 0.8 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.15 }}
+                      className="bg-primary-50 rounded-xl p-4 shadow"
+                    >
                       <div className="flex items-center justify-center space-x-2 mb-2">
-                        <span className="japanese-text text-xl font-medium">
+                        <span className="japanese-text text-2xl font-bold tracking-wider">
                           {currentLine.jp}
                         </span>
                         <button
@@ -607,15 +369,14 @@ export default function KaiwaDetailPage() {
                           <Volume2 className="w-5 h-5 text-primary-500" />
                         </button>
                       </div>
-                      
                       {currentLine.romaji && (
-                        <div className="text-sm text-gray-500 mb-2">
+                        <div className="text-base text-gray-500 mb-2 italic">
                           {currentLine.romaji}
                         </div>
                       )}
-                      
-                      <button
-                        className="text-sm text-primary-600 underline font-semibold"
+                      <motion.button
+                        whileTap={{ scale: 0.95 }}
+                        className="text-base text-primary-600 underline font-semibold"
                         onClick={() =>
                           setShowMeanings((prev) => ({
                             ...prev,
@@ -625,25 +386,39 @@ export default function KaiwaDetailPage() {
                         type="button"
                       >
                         {showMeanings["practice-" + currentStep] ? "Ẩn nghĩa" : "Hiện nghĩa"}
-                      </button>
-                      
-                      {showMeanings["practice-" + currentStep] && (
-                        <div className="text-sm text-gray-700 mt-2 pt-2 border-t border-primary-200">
-                          {currentLine.vi}
-                        </div>
-                      )}
-                    </div>
+                      </motion.button>
+                      <AnimatePresence>
+                        {showMeanings["practice-" + currentStep] && (
+                          <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: 10 }}
+                            className="text-base text-gray-700 mt-2 pt-2 border-t border-primary-200 bg-white rounded shadow-inner"
+                          >
+                            {currentLine.vi}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </motion.div>
                   </div>
                 ) : (
-                  /* Lượt của đối phương */
                   <div className="text-center">
-                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-                      <p className="text-blue-700 font-semibold mb-2">👥 Vai {currentLine.speaker} nói:</p>
-                    </div>
-                    
-                    <div className="bg-blue-50 rounded-xl p-4">
+                    <motion.div
+                      initial={{ scale: 0.98, opacity: 0.8 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4 }}
+                      className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4"
+                    >
+                      <p className="text-blue-700 font-bold mb-2">👥 Vai {currentLine.speaker} nói:</p>
+                    </motion.div>
+                    <motion.div
+                      initial={{ scale: 0.98, opacity: 0.8 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.4, delay: 0.15 }}
+                      className="bg-blue-50 rounded-xl p-4 shadow"
+                    >
                       <div className="flex items-center justify-center space-x-2 mb-2">
-                        <span className="japanese-text text-xl font-medium">
+                        <span className="japanese-text text-2xl font-bold tracking-wider">
                           {currentLine.jp}
                         </span>
                         <button
@@ -655,53 +430,53 @@ export default function KaiwaDetailPage() {
                           <Volume2 className="w-5 h-5 text-blue-500" />
                         </button>
                       </div>
-                      
                       {currentLine.romaji && (
-                        <div className="text-sm text-gray-500 mb-2">
+                        <div className="text-base text-gray-500 mb-2 italic">
                           {currentLine.romaji}
                         </div>
                       )}
-                      
-                      <div className="text-sm text-gray-700 mt-2 pt-2 border-t border-blue-200">
+                      <div className="text-base text-gray-700 mt-2 pt-2 border-t border-blue-200 bg-white rounded shadow-inner">
                         {currentLine.vi}
                       </div>
-                    </div>
+                    </motion.div>
                   </div>
                 )}
-              </div>
-
-              {/* Điều khiển */}
-              <div className="flex justify-center space-x-3">
+              </motion.div>
+              <div className="flex justify-center space-x-3 mt-4">
                 <Button
                   variant="outline"
                   onClick={prevStep}
                   disabled={currentStep === 0}
+                  className="rounded-full shadow"
                 >
                   ← Trước
                 </Button>
                 <Button
                   onClick={nextStep}
                   disabled={currentStep === kaiwa.conversation.length - 1}
-                  className={isMyTurn ? "bg-green-600 hover:bg-green-700" : "bg-primary-600 hover:bg-primary-700"}
+                  className={`rounded-full px-6 py-2 shadow text-white text-lg font-bold ${
+                    isMyTurn
+                      ? "bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800"
+                      : "bg-gradient-to-r from-indigo-500 to-pink-500 hover:from-indigo-600 hover:to-pink-600"
+                  }`}
                 >
                   {currentStep === kaiwa.conversation.length - 1 ? "Hoàn thành" : "Tiếp →"}
                 </Button>
               </div>
-
-              {/* Tiến trình */}
               <div className="mt-6">
                 <div className="flex space-x-1">
                   {kaiwa.conversation.map((_, idx) => (
-                    <div
+                    <motion.div
                       key={idx}
-                      className={`h-2 flex-1 rounded-full ${
+                      layout
+                      className={`h-2 flex-1 rounded-full transition-all duration-200 ${
                         idx <= currentStep ? "bg-primary-500" : "bg-gray-200"
                       }`}
                     />
                   ))}
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
         </div>
       </div>
