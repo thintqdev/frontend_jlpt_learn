@@ -13,13 +13,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import {
   Plus,
-  Edit,
   Trash2,
   Upload,
-  Download,
   FileText,
   Save,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { createCategory } from "@/lib/category";
 import {
@@ -48,9 +48,16 @@ interface Word {
 }
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const CATEGORY_PAGE_SIZE = 5;
 
 export default function AdminPage() {
+  // Pagination for categories
   const [categories, setCategories] = useState<Category[]>([]);
+  const [categoryCount, setCategoryCount] = useState<number>(0);
+  const [categoryPage, setCategoryPage] = useState(1);
+  const [categoryTotalPages, setCategoryTotalPages] = useState(1);
+
+  // Words (no pagination)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [words, setWords] = useState<Word[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,63 +76,43 @@ export default function AdminPage() {
     example: "",
     exampleMeaning: "",
   });
-  const [useShortCategoryQuery, setUseShortCategoryQuery] = useState(false);
-  const [categoryCount, setCategoryCount] = useState<number>(0);
   const [isImporting, setIsImporting] = useState(false);
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [isAddingWord, setIsAddingWord] = useState(false);
   const [deletingWordId, setDeletingWordId] = useState<number | null>(null);
 
   useEffect(() => {
-    loadCategories();
-  }, [useShortCategoryQuery]);
+    loadCategories(categoryPage);
+  }, [categoryPage]);
 
-  const loadCategories = async () => {
+  const loadCategories = async (page: number = 1) => {
+    setLoading(true);
     try {
-      let query;
-      if (useShortCategoryQuery) {
-        query = `
-          query {
-            categories {
-              count
-              items {
-                id
-                name
-                nameJp
-                description
-              }
+      const query = `
+        query($page: Int, $pageSize: Int) {
+          categories(page: $page, pageSize: $pageSize) {
+            count
+            items {
+              id
+              name
+              nameJp
+              level
+              description
             }
           }
-        `;
-      } else {
-        query = `
-          query {
-            categories {
-              items {
-                id
-                name
-                nameJp
-                slug
-                level
-                description
-              }
-            }
-          }
-        `;
-      }
+        }
+      `;
+      const variables = { page, pageSize: CATEGORY_PAGE_SIZE };
       const response = await fetch(`${API_URL}/graphql`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ query }),
+        body: JSON.stringify({ query, variables }),
       });
       const result = await response.json();
-      if (useShortCategoryQuery) {
-        setCategories(result.data.categories.items || []);
-        setCategoryCount(result.data.categories.count || 0);
-      } else {
-        setCategories(result.data.categories.items || []);
-        setCategoryCount(result.data.categories.items?.length || 0);
-      }
+      setCategories(result.data.categories.items || []);
+      const total = result.data.categories.count || 0;
+      setCategoryCount(total);
+      setCategoryTotalPages(Math.max(1, Math.ceil(total / CATEGORY_PAGE_SIZE)));
     } catch (error) {
       console.error("Failed to load categories:", error);
       alert("Failed to load categories");
@@ -135,6 +122,7 @@ export default function AdminPage() {
   };
 
   const loadWords = async (categoryId: string) => {
+    setLoading(true);
     try {
       const words = await getVocabulariesByCategory(Number(categoryId));
       setWords(
@@ -151,6 +139,8 @@ export default function AdminPage() {
     } catch (error) {
       console.error("Failed to load words:", error);
       alert("Failed to load words");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -175,7 +165,7 @@ export default function AdminPage() {
         description: "",
       });
       setShowAddCategory(false);
-      loadCategories();
+      loadCategories(categoryPage); // reload current page
     } catch (error: any) {
       alert(`Thêm nhóm thất bại: ${error.message}`);
     } finally {
@@ -213,7 +203,7 @@ export default function AdminPage() {
       });
       setShowAddWord(false);
       loadWords(selectedCategory);
-      loadCategories();
+      loadCategories(categoryPage);
     } catch (error: any) {
       alert(`Thêm từ thất bại: ${error.message}`);
     } finally {
@@ -230,7 +220,7 @@ export default function AdminPage() {
       await removeVocabulary(wordId);
       alert("Xoá từ thành công!");
       loadWords(selectedCategory);
-      loadCategories();
+      loadCategories(categoryPage);
     } catch (error: any) {
       alert(`Xoá từ thất bại: ${error.message}`);
     } finally {
@@ -243,7 +233,7 @@ export default function AdminPage() {
     try {
       await importVocabularyCsv(file, Number(categoryId));
       alert("Nhập từ vựng từ file CSV thành công!");
-      loadCategories();
+      loadCategories(categoryPage);
       if (selectedCategory === categoryId) {
         loadWords(categoryId);
       }
@@ -253,6 +243,39 @@ export default function AdminPage() {
       setIsImporting(false);
     }
   };
+
+  // Pagination component for categories
+  const Pagination = ({
+    page,
+    totalPages,
+    onPageChange,
+  }: {
+    page: number;
+    totalPages: number;
+    onPageChange: (p: number) => void;
+  }) => (
+    <div className="flex justify-end items-center gap-2 mt-3">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page === 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <span className="text-sm font-medium">
+        Trang {page} / {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page === totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 
   if (loading) {
     return (
@@ -375,7 +398,7 @@ export default function AdminPage() {
                 </div>
               )}
 
-              <div className="space-y-3 max-h-screen overflow-y-auto">
+              <div className="space-y-3">
                 {categories.map((category) => (
                   <div
                     key={category.id}
@@ -440,6 +463,12 @@ export default function AdminPage() {
                     </div>
                   </div>
                 ))}
+                {/* Pagination for categories */}
+                <Pagination
+                  page={categoryPage}
+                  totalPages={categoryTotalPages}
+                  onPageChange={setCategoryPage}
+                />
               </div>
             </CardContent>
           </Card>
@@ -620,7 +649,7 @@ export default function AdminPage() {
                 <div className="text-2xl font-bold text-red-600">
                   {categories.length}
                 </div>
-                <p className="text-sm text-gray-600">Categories</p>
+                <p className="text-sm text-gray-600">Categories (trang hiện tại)</p>
               </div>
             </CardContent>
           </Card>

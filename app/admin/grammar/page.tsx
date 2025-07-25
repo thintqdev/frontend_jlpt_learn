@@ -11,7 +11,20 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Save, X, Trash2, Edit } from "lucide-react";
+import {
+  Plus,
+  Save,
+  X,
+  Trash2,
+  Edit,
+  Upload,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ArrowDownZA,
+  ArrowUpZA,
+} from "lucide-react";
 import {
   getGrammars,
   createGrammar,
@@ -20,6 +33,8 @@ import {
   createGrammarExample,
   removeGrammarExample,
   getGrammarExamples,
+  importGrammarJson,
+  importGrammarCsv,
 } from "@/lib/grammar";
 import React from "react";
 import { renderExample } from "../../../common/utils";
@@ -47,11 +62,28 @@ interface GrammarPoint {
   usages: Usage[];
 }
 
+const GRAMMAR_PAGE_SIZE = 5;
+const GRAMMAR_SORT_FIELDS = [
+  { value: "id", label: "ID" },
+  { value: "title", label: "Tên" },
+  { value: "level", label: "Cấp độ" },
+  { value: "definition", label: "Định nghĩa" },
+  { value: "description", label: "Mô tả" },
+];
+
 export default function GrammarAdminPage() {
   const [grammarList, setGrammarList] = useState<GrammarPoint[]>([]);
-  const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(
-    null
-  );
+  const [grammarCount, setGrammarCount] = useState(0);
+  const [grammarPage, setGrammarPage] = useState(1);
+  const [grammarTotalPages, setGrammarTotalPages] = useState(1);
+
+  // Search & Sort
+  const [search, setSearch] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [sortBy, setSortBy] = useState("id");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(null);
   const [showAddGrammar, setShowAddGrammar] = useState(false);
   const [isAddingGrammar, setIsAddingGrammar] = useState(false);
   const [newGrammar, setNewGrammar] = useState({
@@ -68,48 +100,63 @@ export default function GrammarAdminPage() {
     meaning: "",
     note: "",
   });
-  const [showAddExampleUsageId, setShowAddExampleUsageId] = useState<
-    number | null
-  >(null);
+  const [showAddExampleUsageId, setShowAddExampleUsageId] = useState<number | null>(null);
   const [isAddingExample, setIsAddingExample] = useState(false);
-  const [editingExample, setEditingExample] = useState<{
-    usageId: number;
-    exampleId: number;
-  } | null>(null);
+  const [editingExample, setEditingExample] = useState<{ usageId: number; exampleId: number } | null>(null);
   const [exampleForm, setExampleForm] = useState({
     sentence: "",
     translation: "",
   });
   const [loading, setLoading] = useState(false);
 
-  // Lấy danh sách ngữ pháp từ API khi load trang
-  useEffect(() => {
-    loadGrammars();
-  }, []);
+  // Import/Export
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [showImportCSVModal, setShowImportCSVModal] = useState(false);
+  const [csvFile, setCSVFile] = useState<File | null>(null);
+  const [isImportingCSV, setIsImportingCSV] = useState(false);
 
-  // Khi chọn điểm ngữ pháp, load lại usages và ví dụ từ API (nếu cần)
+  // Lấy danh sách ngữ pháp từ API khi load trang hoặc search/sort thay đổi
+  useEffect(() => {
+    loadGrammars(grammarPage, search, sortBy, sortOrder);
+  }, [grammarPage, search, sortBy, sortOrder]);
+
   useEffect(() => {
     if (selectedGrammarId) {
       loadExamplesForGrammar(selectedGrammarId);
     }
   }, [selectedGrammarId]);
 
-  const loadGrammars = async () => {
+  const loadGrammars = async (
+    page: number = 1,
+    searchText: string = "",
+    sortField: string = "id",
+    sortDir: "asc" | "desc" = "asc"
+  ) => {
     setLoading(true);
     try {
-      const grammars = await getGrammars();
+      const { items, count } = await getGrammars(
+        page,
+        GRAMMAR_PAGE_SIZE,
+        searchText,
+        sortField,
+        sortDir
+      );
       setGrammarList(
-        (grammars || []).map((g: any) => ({
+        (items || []).map((g: any) => ({
           ...g,
           usages: (g.usages || []).map((u: any) => ({
             ...u,
-            structure: u.structure || "", // nếu có
+            structure: u.structure || "",
             meaning: u.meaning,
             note: u.note,
             examples: u.examples || [],
           })),
         }))
       );
+      setGrammarCount(count || 0);
+      setGrammarTotalPages(Math.max(1, Math.ceil((count || 0) / GRAMMAR_PAGE_SIZE)));
     } catch (e) {
       alert("Không thể tải danh sách ngữ pháp");
     } finally {
@@ -118,7 +165,6 @@ export default function GrammarAdminPage() {
   };
 
   const loadExamplesForGrammar = async (grammarId: number) => {
-    // Lấy tất cả ví dụ, lọc theo usage thuộc grammar đang chọn
     const grammar = grammarList.find((g) => g.id === grammarId);
     if (!grammar) return;
     try {
@@ -139,7 +185,6 @@ export default function GrammarAdminPage() {
     } catch {}
   };
 
-  // Thêm điểm ngữ pháp mới qua API
   const handleAddGrammar = async () => {
     if (!newGrammar.title) {
       alert("Vui lòng nhập tên điểm ngữ pháp");
@@ -147,13 +192,14 @@ export default function GrammarAdminPage() {
     }
     setIsAddingGrammar(true);
     try {
-      const created = await createGrammar({
+      await createGrammar({
         title: newGrammar.title,
         level: newGrammar.level,
         definition: newGrammar.definition,
         description: newGrammar.description,
       } as any);
-      setGrammarList([...grammarList, { ...created, usages: [] }]);
+      // Reload trang hiện tại
+      loadGrammars(grammarPage, search, sortBy, sortOrder);
       setNewGrammar({
         title: "",
         level: "N5",
@@ -168,19 +214,100 @@ export default function GrammarAdminPage() {
     }
   };
 
-  // Xoá điểm ngữ pháp qua API
+  // ----------- Export JSON -----------
+  const handleExportJSON = () => {
+    if (grammarList.length === 0) {
+      alert("Không có dữ liệu để export");
+      return;
+    }
+
+    const exportData = grammarList.map((g) => ({
+      title: g.title,
+      level: g.level,
+      definition: g.definition,
+      description: g.description,
+      usages: g.usages.map((u) => ({
+        structure: u.structure,
+        meaning: u.meaning,
+        note: u.note,
+        examples: u.examples.map((ex) => ({
+          sentence: ex.sentence,
+          translation: ex.translation,
+        })),
+      })),
+    }));
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `grammar-export-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  // ----------- Import JSON -----------
+  const handleImportJSON = async () => {
+    if (!importText.trim()) {
+      alert("Vui lòng nhập dữ liệu JSON");
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const ok = await importGrammarJson(importText);
+      if (ok) {
+        await loadGrammars(grammarPage, search, sortBy, sortOrder);
+        alert("Đã import ngữ pháp thành công từ JSON!");
+        setShowImportModal(false);
+        setImportText("");
+      } else {
+        alert("Import JSON thất bại!");
+      }
+    } catch (error: any) {
+      alert(`Lỗi import: ${error.message}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  // ----------- Import CSV -----------
+  const handleImportCSV = async () => {
+    if (!csvFile) {
+      alert("Vui lòng chọn file CSV");
+      return;
+    }
+    setIsImportingCSV(true);
+    try {
+      const ok = await importGrammarCsv(csvFile);
+      if (ok) {
+        await loadGrammars(grammarPage, search, sortBy, sortOrder);
+        alert("Đã import ngữ pháp thành công từ CSV!");
+        setShowImportCSVModal(false);
+        setCSVFile(null);
+      } else {
+        alert("Import CSV thất bại!");
+      }
+    } catch (error: any) {
+      alert(`Lỗi import CSV: ${error.message}`);
+    } finally {
+      setIsImportingCSV(false);
+    }
+  };
+
   const handleDeleteGrammar = async (id: number) => {
     if (!confirm("Bạn có chắc chắn muốn xoá điểm ngữ pháp này?")) return;
     try {
       await removeGrammar(id);
-      setGrammarList(grammarList.filter((g) => g.id !== id));
+      loadGrammars(grammarPage, search, sortBy, sortOrder);
       if (selectedGrammarId === id) setSelectedGrammarId(null);
     } catch (e) {
       alert("Xoá điểm ngữ pháp thất bại");
     }
   };
 
-  // Thêm hoặc sửa usage
   const handleSaveUsage = async () => {
     if (!usageForm.structure || !usageForm.meaning) {
       alert("Vui lòng nhập cấu trúc và ý nghĩa cho cách dùng");
@@ -189,7 +316,6 @@ export default function GrammarAdminPage() {
     setIsAddingUsage(true);
     try {
       if (!selectedGrammarId) throw new Error("Chưa chọn điểm ngữ pháp");
-      // Gọi API tạo usage với input mới
       const created = await createGrammarUsage({
         grammarId: selectedGrammarId,
         structure: usageForm.structure,
@@ -225,7 +351,6 @@ export default function GrammarAdminPage() {
     }
   };
 
-  // Xoá usage
   const handleDeleteUsage = (usageId: number) => {
     if (!confirm("Bạn có chắc chắn muốn xoá cách dùng này?")) return;
     setGrammarList((prev) =>
@@ -237,7 +362,6 @@ export default function GrammarAdminPage() {
     );
   };
 
-  // Thêm hoặc sửa ví dụ cho usage
   const handleSaveExample = async (usageId: number) => {
     if (!exampleForm.sentence || !exampleForm.translation) {
       alert("Vui lòng nhập câu ví dụ và dịch nghĩa");
@@ -245,7 +369,6 @@ export default function GrammarAdminPage() {
     }
     setIsAddingExample(true);
     try {
-      // Gọi API tạo ví dụ
       const created = await createGrammarExample({
         sentence: exampleForm.sentence,
         translation: exampleForm.translation,
@@ -278,7 +401,6 @@ export default function GrammarAdminPage() {
     }
   };
 
-  // Xoá ví dụ
   const handleDeleteExample = async (usageId: number, exampleId: number) => {
     try {
       await removeGrammarExample(exampleId);
@@ -306,6 +428,39 @@ export default function GrammarAdminPage() {
     }
   };
 
+  // Phân trang cho điểm ngữ pháp
+  const Pagination = ({
+    page,
+    totalPages,
+    onPageChange,
+  }: {
+    page: number;
+    totalPages: number;
+    onPageChange: (p: number) => void;
+  }) => (
+    <div className="flex justify-end items-center gap-2 mt-3">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page === 1}
+        onClick={() => onPageChange(page - 1)}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <span className="text-sm font-medium">
+        Trang {page} / {totalPages}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={page === totalPages}
+        onClick={() => onPageChange(page + 1)}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+
   const selectedGrammar = grammarList.find((g) => g.id === selectedGrammarId);
 
   if (loading) {
@@ -327,9 +482,111 @@ export default function GrammarAdminPage() {
             Admin | Ngữ pháp tiếng Nhật
           </h1>
           <p className="text-gray-600">
-            Quản lý các điểm ngữ pháp, nhiều cách dùng và ví dụ minh hoạ cho
-            từng cách dùng.
+            Quản lý các điểm ngữ pháp, nhiều cách dùng và ví dụ minh hoạ cho từng cách dùng.
           </p>
+          <div className="flex flex-col md:flex-row md:items-center gap-3 mt-4">
+            <div className="flex flex-1 gap-2 items-center">
+              <Input
+                placeholder="Tìm kiếm ngữ pháp..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    setSearch(searchInput);
+                    setGrammarPage(1);
+                  }
+                }}
+                className="max-w-xs"
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearch(searchInput);
+                  setGrammarPage(1);
+                }}
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Tìm kiếm
+              </Button>
+              {search !== "" && (
+                <Button
+                  variant="ghost"
+                  onClick={() => {
+                    setSearch("");
+                    setSearchInput("");
+                    setGrammarPage(1);
+                  }}
+                  size="sm"
+                  className="ml-2"
+                >
+                  <X className="h-4 w-4" />
+                  Xoá
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2 items-center">
+              <label htmlFor="sortBy" className="text-sm text-gray-600">
+                Sắp xếp:
+              </label>
+              <select
+                id="sortBy"
+                value={sortBy}
+                onChange={(e) => {
+                  setSortBy(e.target.value);
+                  setGrammarPage(1);
+                }}
+                className="border rounded px-2 py-1 text-sm"
+              >
+                {GRAMMAR_SORT_FIELDS.map((field) => (
+                  <option key={field.value} value={field.value}>
+                    {field.label}
+                  </option>
+                ))}
+              </select>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+                  setGrammarPage(1);
+                }}
+                title={sortOrder === "asc" ? "Tăng dần" : "Giảm dần"}
+              >
+                {sortOrder === "asc" ? (
+                  <ArrowUpZA className="h-4 w-4" />
+                ) : (
+                  <ArrowDownZA className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setShowImportModal(true)}
+                variant="outline"
+                className="border-blue-500 text-blue-600 hover:bg-blue-50"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import JSON
+              </Button>
+              <Button
+                onClick={() => setShowImportCSVModal(true)}
+                variant="outline"
+                className="border-purple-500 text-purple-600 hover:bg-purple-50"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Import CSV
+              </Button>
+              <Button
+                onClick={handleExportJSON}
+                variant="outline"
+                className="border-green-500 text-green-600 hover:bg-green-50"
+                disabled={grammarList.length === 0}
+              >
+                <Download className="h-4 w-4 mr-2" />
+                Export JSON
+              </Button>
+            </div>
+          </div>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-[calc(100vh-12rem)]">
           {/* Danh sách điểm ngữ pháp */}
@@ -416,7 +673,7 @@ export default function GrammarAdminPage() {
                   </div>
                 </div>
               )}
-              <div className="overflow-y-auto max-h-screen space-y-3 pr-2">
+              <div className="space-y-3">
                 {grammarList.map((g) => (
                   <div
                     key={g.id}
@@ -452,6 +709,12 @@ export default function GrammarAdminPage() {
                     </div>
                   </div>
                 ))}
+                {/* Pagination for grammars */}
+                <Pagination
+                  page={grammarPage}
+                  totalPages={grammarTotalPages}
+                  onPageChange={setGrammarPage}
+                />
               </div>
             </CardContent>
           </Card>
@@ -737,14 +1000,186 @@ export default function GrammarAdminPage() {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <p>
-                    Chọn điểm ngữ pháp để xem chi tiết, quản lý cách dùng và ví
-                    dụ
+                    Chọn điểm ngữ pháp để xem chi tiết, quản lý cách dùng và ví dụ
                   </p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
+        {/* Import JSON Modal */}
+        {showImportModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold">Import JSON Ngữ pháp</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportText("");
+                    }}
+                  >
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="mb-4">
+                  <h3 className="font-medium mb-2">Định dạng JSON mẫu:</h3>
+                  <div className="bg-gray-100 p-3 rounded text-sm font-mono overflow-x-auto">
+                    <pre>{`[
+  {
+    "title": "〜ている",
+    "level": "N5",
+    "definition": "Đang ...",
+    "description": "Diễn tả hành động đang diễn ra",
+    "usages": [
+      {
+        "structure": "Vている",
+        "meaning": "Đang ...",
+        "note": "",
+        "examples": [
+          {
+            "sentence": "私は食べている。",
+            "translation": "Tôi đang ăn."
+          }
+        ]
+      }
+    ]
+  }
+]`}</pre>
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Dán JSON data vào đây:
+                  </label>
+                  <Textarea
+                    value={importText}
+                    onChange={(e) => setImportText(e.target.value)}
+                    placeholder="Dán JSON data của các điểm ngữ pháp..."
+                    rows={12}
+                    className="font-mono text-sm"
+                  />
+                </div>
+                <div className="text-sm text-gray-600 mb-4">
+                  <ul className="list-disc list-inside space-y-1 mt-2">
+                    <li>Dữ liệu phải là mảng JSON hợp lệ</li>
+                    <li>Mỗi điểm ngữ pháp cần có: title, level, definition, usages</li>
+                    <li>Mỗi cách dùng cần có: structure, meaning, examples</li>
+                    <li>Mỗi ví dụ cần có: sentence, translation</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="p-6 border-t bg-gray-50">
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowImportModal(false);
+                      setImportText("");
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    onClick={handleImportJSON}
+                    disabled={isImporting || !importText.trim()}
+                    className="bg-blue-600 hover:bg-blue-700"
+                  >
+                    {isImporting ? (
+                      <span className="animate-spin mr-2">
+                        <Upload className="h-4 w-4" />
+                      </span>
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {isImporting ? "Đang import..." : "Import"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* Import CSV Modal */}
+        {showImportCSVModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-hidden">
+              <div className="p-6 border-b flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Import CSV Ngữ pháp</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowImportCSVModal(false);
+                    setCSVFile(null);
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[60vh]">
+                <div className="mb-4">
+                  <h3 className="font-medium mb-2">Định dạng file CSV:</h3>
+                  <div className="bg-gray-100 p-3 rounded text-sm font-mono overflow-x-auto">
+                    <pre>{`title,level,definition,description,structure,meaning,note,sentence,translation
+〜ている,N5,Đang ...,Diễn tả hành động đang diễn ra,Vている,Đang ...,,"私は食べている。","Tôi đang ăn."
+〜ている,N5,Đang ...,Diễn tả hành động đang diễn ra,Vている,Đang ...,, "彼は走っている。", "Anh ấy đang chạy."`}</pre>
+                  </div>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-2">
+                    Chọn file CSV:
+                  </label>
+                  <input
+                    type="file"
+                    accept=".csv"
+                    onChange={(e) => setCSVFile(e.target.files?.[0] || null)}
+                    className="block"
+                  />
+                </div>
+                <div className="text-sm text-gray-600 mb-4">
+                  <ul className="list-disc list-inside space-y-1 mt-2">
+                    <li>Dữ liệu phải là file CSV hợp lệ theo mẫu trên</li>
+                    <li>Mỗi dòng là một ví dụ thuộc cách dùng của một điểm ngữ pháp</li>
+                    <li>Nếu các trường giống nhau thì sẽ được gộp thành cùng 1 điểm ngữ pháp/cách dùng</li>
+                  </ul>
+                </div>
+              </div>
+              <div className="p-6 border-t bg-gray-50">
+                <div className="flex gap-3 justify-end">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowImportCSVModal(false);
+                      setCSVFile(null);
+                    }}
+                  >
+                    Hủy
+                  </Button>
+                  <Button
+                    onClick={handleImportCSV}
+                    disabled={isImportingCSV || !csvFile}
+                    className="bg-purple-600 hover:bg-purple-700"
+                  >
+                    {isImportingCSV ? (
+                      <span className="animate-spin mr-2">
+                        <Upload className="h-4 w-4" />
+                      </span>
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {isImportingCSV ? "Đang import..." : "Import CSV"}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
