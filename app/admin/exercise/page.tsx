@@ -60,6 +60,7 @@ import {
   importQuestionCsv,
 } from "@/lib/exercise";
 import { highlightGrammarInSentence } from "@/common/utils";
+import AdminNav from "@/components/admin-nav";
 
 const emptyQuestion: Omit<Question, "id"> = {
   question: "",
@@ -226,6 +227,7 @@ export default function QuestionAdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-4">
+      <AdminNav />
       <div className="max-w-7xl mx-auto">
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-800">

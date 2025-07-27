@@ -1,38 +1,50 @@
-"use client"
+"use client";
 
-import type React from "react"
+import type React from "react";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 interface AdminAuthProps {
-  onAuthenticated: () => void
+  onAuthenticated: () => void;
 }
 
 export function AdminAuth({ onAuthenticated }: AdminAuthProps) {
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+    e.preventDefault();
 
-    // Simple password check (in production, use proper authentication)
-    if (password === "admin123") {
-      localStorage.setItem("admin-authenticated", "true")
-      onAuthenticated()
+    // Lấy password từ biến môi trường (client-side)
+    const envPassword =
+      typeof window !== "undefined"
+        ? process.env.NEXT_PUBLIC_ADMIN_PASSWORD || "admin123"
+        : "admin123";
+    if (password === envPassword) {
+      localStorage.setItem("admin-authenticated", "true");
+      onAuthenticated();
     } else {
-      setError("Invalid password")
+      setError("Invalid password");
     }
-  }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Admin Access</CardTitle>
-          <CardDescription>Enter password to access admin panel</CardDescription>
+          <CardDescription>
+            Enter password to access admin panel
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -50,9 +62,8 @@ export function AdminAuth({ onAuthenticated }: AdminAuthProps) {
               Access Admin Panel
             </Button>
           </form>
-          <div className="mt-4 text-xs text-gray-500 text-center">Demo password: admin123</div>
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

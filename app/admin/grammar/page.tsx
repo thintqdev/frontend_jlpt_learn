@@ -11,7 +11,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Save, X, Trash2, Edit, Upload, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Save,
+  X,
+  Trash2,
+  Edit,
+  Upload,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import {
   getGrammars,
   createGrammar,
@@ -26,6 +36,7 @@ import {
 } from "@/lib/grammar";
 import React from "react";
 import { renderExample } from "../../../common/utils";
+import AdminNav from "@/components/admin-nav";
 
 interface Example {
   id: number;
@@ -59,7 +70,9 @@ export default function GrammarAdminPage() {
   const [grammarPage, setGrammarPage] = useState(1);
   const [grammarTotalPages, setGrammarTotalPages] = useState(1);
 
-  const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(null);
+  const [selectedGrammarId, setSelectedGrammarId] = useState<number | null>(
+    null
+  );
   const [showAddGrammar, setShowAddGrammar] = useState(false);
   const [isAddingGrammar, setIsAddingGrammar] = useState(false);
   const [newGrammar, setNewGrammar] = useState({
@@ -78,9 +91,14 @@ export default function GrammarAdminPage() {
     note: "",
   });
 
-  const [showAddExampleUsageId, setShowAddExampleUsageId] = useState<number | null>(null);
+  const [showAddExampleUsageId, setShowAddExampleUsageId] = useState<
+    number | null
+  >(null);
   const [isAddingExample, setIsAddingExample] = useState(false);
-  const [editingExample, setEditingExample] = useState<{ usageId: number; exampleId: number } | null>(null);
+  const [editingExample, setEditingExample] = useState<{
+    usageId: number;
+    exampleId: number;
+  } | null>(null);
   const [exampleForm, setExampleForm] = useState({
     sentence: "",
     translation: "",
@@ -124,7 +142,9 @@ export default function GrammarAdminPage() {
         }))
       );
       setGrammarCount(count || 0);
-      setGrammarTotalPages(Math.max(1, Math.ceil((count || 0) / GRAMMAR_PAGE_SIZE)));
+      setGrammarTotalPages(
+        Math.max(1, Math.ceil((count || 0) / GRAMMAR_PAGE_SIZE))
+      );
     } catch (e) {
       alert("Không thể tải danh sách ngữ pháp");
     } finally {
@@ -210,7 +230,9 @@ export default function GrammarAdminPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `grammar-export-${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `grammar-export-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -231,7 +253,7 @@ export default function GrammarAdminPage() {
         await loadGrammars(grammarPage);
         alert("Đã import ngữ pháp thành công từ JSON!");
         setShowImportModal(false);
-        setImportText('');
+        setImportText("");
       } else {
         alert("Import JSON thất bại!");
       }
@@ -469,12 +491,14 @@ export default function GrammarAdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-pink-50 p-4">
       <div className="max-w-6xl mx-auto">
+        <AdminNav />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Admin | Ngữ pháp tiếng Nhật
           </h1>
           <p className="text-gray-600">
-            Quản lý các điểm ngữ pháp, nhiều cách dùng và ví dụ minh hoạ cho từng cách dùng.
+            Quản lý các điểm ngữ pháp, nhiều cách dùng và ví dụ minh hoạ cho
+            từng cách dùng.
           </p>
           <div className="flex gap-3 mt-4">
             <Button
@@ -593,10 +617,11 @@ export default function GrammarAdminPage() {
                 {grammarList.map((g) => (
                   <div
                     key={g.id}
-                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex-shrink-0 ${selectedGrammarId === g.id
+                    className={`p-4 border rounded-lg cursor-pointer transition-colors flex-shrink-0 ${
+                      selectedGrammarId === g.id
                         ? "border-yellow-500 bg-yellow-50"
                         : "border-gray-200 hover:border-gray-300"
-                      }`}
+                    }`}
                     onClick={() => setSelectedGrammarId(g.id)}
                   >
                     <div className="flex items-center justify-between">
@@ -915,7 +940,8 @@ export default function GrammarAdminPage() {
               ) : (
                 <div className="text-center py-12 text-gray-500">
                   <p>
-                    Chọn điểm ngữ pháp để xem chi tiết, quản lý cách dùng và ví dụ
+                    Chọn điểm ngữ pháp để xem chi tiết, quản lý cách dùng và ví
+                    dụ
                   </p>
                 </div>
               )}
@@ -928,7 +954,9 @@ export default function GrammarAdminPage() {
             <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
               <div className="p-6 border-b">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold">Import JSON Ngữ pháp</h2>
+                  <h2 className="text-xl font-semibold">
+                    Import JSON Ngữ pháp
+                  </h2>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -984,7 +1012,9 @@ export default function GrammarAdminPage() {
                 <div className="text-sm text-gray-600 mb-4">
                   <ul className="list-disc list-inside space-y-1 mt-2">
                     <li>Dữ liệu phải là mảng JSON hợp lệ</li>
-                    <li>Mỗi điểm ngữ pháp cần có: title, level, definition, usages</li>
+                    <li>
+                      Mỗi điểm ngữ pháp cần có: title, level, definition, usages
+                    </li>
                     <li>Mỗi cách dùng cần có: structure, meaning, examples</li>
                     <li>Mỗi ví dụ cần có: sentence, translation</li>
                   </ul>
@@ -1060,8 +1090,14 @@ export default function GrammarAdminPage() {
                 <div className="text-sm text-gray-600 mb-4">
                   <ul className="list-disc list-inside space-y-1 mt-2">
                     <li>Dữ liệu phải là file CSV hợp lệ theo mẫu trên</li>
-                    <li>Mỗi dòng là một ví dụ thuộc cách dùng của một điểm ngữ pháp</li>
-                    <li>Nếu các trường giống nhau thì sẽ được gộp thành cùng 1 điểm ngữ pháp/cách dùng</li>
+                    <li>
+                      Mỗi dòng là một ví dụ thuộc cách dùng của một điểm ngữ
+                      pháp
+                    </li>
+                    <li>
+                      Nếu các trường giống nhau thì sẽ được gộp thành cùng 1
+                      điểm ngữ pháp/cách dùng
+                    </li>
                   </ul>
                 </div>
               </div>

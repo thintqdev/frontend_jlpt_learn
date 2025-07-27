@@ -20,7 +20,7 @@ import {
   AccordionContent,
 } from "@/components/ui/accordion";
 import AppLayout from "@/components/app-layout";
-import { X } from "lucide-react";
+import { X, CheckCircle2, XCircle, FileText } from "lucide-react";
 import { highlightGrammarInSentence } from "@/common/utils";
 
 const LEVELS = [
@@ -78,13 +78,16 @@ export default function ExercisePage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
+      <div className="min-h-screen pb-20">
         {/* Header */}
         <div className="px-6 pt-12 pb-6 border-b border-gray-100">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
-              Bài tập ngẫu nhiên
-            </h1>
+            <div className="flex items-center gap-3">
+              <FileText className="h-8 w-8 text-rose-400" />
+              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+                Bài tập ngẫu nhiên
+              </h1>
+            </div>
             <div className="flex items-center space-x-2">
               {questions.length > 0 && (
                 <Badge
@@ -108,8 +111,9 @@ export default function ExercisePage() {
               {showResult && (
                 <Badge
                   variant="default"
-                  className="bg-gray-900 text-white px-3 py-1 rounded-full text-xs font-semibold"
+                  className="bg-rose-500 text-white px-5 py-2 rounded-full text-base font-bold shadow-lg flex items-center gap-2"
                 >
+                  <CheckCircle2 className="h-5 w-5 text-white" />
                   Đúng {correctCount}/{questions.length}
                 </Badge>
               )}
@@ -118,49 +122,51 @@ export default function ExercisePage() {
           {/* Filter */}
           <form
             onSubmit={handleSubmit}
-            className="flex flex-wrap gap-4 mb-2 items-end"
+            className="flex flex-col items-center justify-center"
           >
-            <div className="w-32">
-              <label className="block mb-1 font-medium text-gray-700">
-                Chọn level
-              </label>
-              <Select value={level} onValueChange={setLevel}>
-                <SelectTrigger className="rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-300">
-                  <SelectValue placeholder="Chọn level" />
-                </SelectTrigger>
-                <SelectContent>
-                  {LEVELS.map((l) => (
-                    <SelectItem key={l.value} value={l.value}>
-                      {l.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="w-full max-w-md bg-white rounded-2xl shadow-lg border border-gray-100 p-6 flex flex-col md:flex-row gap-6 items-end mt-2">
+              <div className="w-full md:w-1/2">
+                <label className="block mb-1 font-medium text-gray-700">
+                  Chọn level
+                </label>
+                <Select value={level} onValueChange={setLevel}>
+                  <SelectTrigger className="rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-300">
+                    <SelectValue placeholder="Chọn level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LEVELS.map((l) => (
+                      <SelectItem key={l.value} value={l.value}>
+                        {l.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="w-full md:w-1/2">
+                <label className="block mb-1 font-medium text-gray-700">
+                  Số câu hỏi
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={count}
+                  onChange={(e) => setCount(Number(e.target.value))}
+                  className="rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-300"
+                />
+              </div>
+              <Button
+                type="submit"
+                disabled={loading}
+                className="h-10 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold px-6 shadow mt-2 md:mt-0"
+              >
+                {loading ? "Đang lấy..." : "Bắt đầu"}
+              </Button>
             </div>
-            <div className="w-32">
-              <label className="block mb-1 font-medium text-gray-700">
-                Số câu hỏi
-              </label>
-              <Input
-                type="number"
-                min={1}
-                max={20}
-                value={count}
-                onChange={(e) => setCount(Number(e.target.value))}
-                className="rounded-lg border-gray-200 shadow-sm focus:ring-2 focus:ring-gray-300"
-              />
-            </div>
-            <Button
-              type="submit"
-              disabled={loading}
-              className="h-10 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold px-6 shadow"
-            >
-              {loading ? "Đang lấy..." : "Bắt đầu"}
-            </Button>
           </form>
         </div>
         {/* Nội dung */}
-        <div className="px-6 py-8">
+        <div className="px-2 md:px-6 py-8 max-w-3xl mx-auto">
           {loading && (
             <div className="animate-pulse">
               <div className="h-8 bg-gray-200 rounded w-32 mb-4"></div>
@@ -192,11 +198,14 @@ export default function ExercisePage() {
             {questions.map((q, idx) => (
               <Card
                 key={q.id}
-                className="rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all duration-200"
+                className="rounded-3xl border border-gray-200 shadow-xl hover:shadow-2xl transition-all duration-200 bg-white/90"
               >
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-lg font-semibold text-gray-900">
-                    Câu {idx + 1}: {highlightGrammarInSentence(q.question)}
+                  <CardTitle className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="text-rose-400 font-bold">
+                      Câu {idx + 1}:
+                    </span>{" "}
+                    {highlightGrammarInSentence(q.question)}
                   </CardTitle>
                   <Badge
                     variant="secondary"
@@ -228,20 +237,22 @@ export default function ExercisePage() {
                   >
                     {q.options.map((opt, i) => {
                       const isSelected = answers[q.id] === i;
+                      const isCorrect = q.correctAnswer === i;
+                      const isWrong = showResult && isSelected && !isCorrect;
                       return (
                         <div
                           key={i}
                           role="button"
                           tabIndex={0}
                           aria-checked={isSelected}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-lg border transition-colors text-base font-medium select-none cursor-pointer outline-none
+                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-base font-medium select-none cursor-pointer outline-none
                             ${
                               showResult && isSelected
-                                ? isSelected === (q.correctAnswer === i)
+                                ? isCorrect
                                   ? "bg-green-50 border-green-400 text-green-700"
                                   : "bg-red-50 border-red-400 text-red-700"
                                 : isSelected
-                                ? "border-gray-400 bg-gray-50"
+                                ? "border-rose-400 bg-rose-50"
                                 : "border-gray-200 hover:bg-gray-50"
                             }
                           `}
@@ -267,17 +278,19 @@ export default function ExercisePage() {
                           >
                             {opt}
                           </label>
-                          {showResult && q.correctAnswer === i && (
-                            <span className="ml-2 text-green-600 font-semibold text-sm">
-                              Đáp án
-                            </span>
+                          {showResult && isCorrect && (
+                            <CheckCircle2 className="ml-2 text-green-500 h-5 w-5" />
+                          )}
+                          {isWrong && (
+                            <XCircle className="ml-2 text-red-500 h-5 w-5" />
                           )}
                         </div>
                       );
                     })}
                   </RadioGroup>
                   {showResult && answers[q.id] !== q.correctAnswer && (
-                    <div className="text-red-500 mt-2 text-sm">
+                    <div className="text-red-500 mt-2 text-sm flex items-center gap-2">
+                      <XCircle className="h-4 w-4" />
                       Sai. Đáp án đúng là:{" "}
                       <span className="font-semibold">
                         {q.options[q.correctAnswer]}
@@ -302,7 +315,7 @@ export default function ExercisePage() {
           </div>
           {questions.length > 0 && !showResult && (
             <Button
-              className="mt-10 w-full rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-semibold text-base py-3 shadow"
+              className="mt-10 w-full rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-base py-3 shadow-lg text-lg tracking-wide"
               onClick={handleCheck}
               disabled={Object.keys(answers).length !== questions.length}
             >

@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Plus,
   Trash2,
@@ -20,14 +21,20 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Download,
 } from "lucide-react";
-import { createCategory } from "@/lib/category";
+import {
+  createCategory,
+  importCategoryJson,
+  removeCategory,
+} from "@/lib/category";
 import {
   getVocabulariesByCategory,
   createVocabulary,
   removeVocabulary,
   importVocabularyCsv,
 } from "@/lib/vocabulary";
+import AdminNav from "@/components/admin-nav";
 
 interface Category {
   id: string;
@@ -81,6 +88,11 @@ export default function AdminPage() {
   const [isAddingWord, setIsAddingWord] = useState(false);
   const [deletingWordId, setDeletingWordId] = useState<number | null>(null);
 
+  // Import/Export state
+  const [showCategoryImportModal, setShowCategoryImportModal] = useState(false);
+  const [categoryImportText, setCategoryImportText] = useState("");
+  const [isImportingCategory, setIsImportingCategory] = useState(false);
+
   useEffect(() => {
     loadCategories(categoryPage);
   }, [categoryPage]);
@@ -130,9 +142,9 @@ export default function AdminPage() {
           id: w.id,
           kanji: w.kanji,
           hiragana: w.hiragana,
-          meaning: w.definition,
+          meaning: w.definition, // Map definition to meaning for UI
           example: w.example,
-          exampleMeaning: w.translation,
+          exampleMeaning: w.translation, // Map translation to exampleMeaning for UI
         }))
       );
       setSelectedCategory(categoryId);
@@ -188,9 +200,9 @@ export default function AdminPage() {
       await createVocabulary({
         kanji: newWord.kanji,
         hiragana: newWord.hiragana,
-        definition: newWord.meaning,
+        definition: newWord.meaning, // Map meaning to definition
         example: newWord.example,
-        translation: newWord.exampleMeaning,
+        translation: newWord.exampleMeaning, // Map exampleMeaning to translation
         categoryId: Number(selectedCategory),
       });
       alert("Thêm từ thành công!");
@@ -244,6 +256,114 @@ export default function AdminPage() {
     }
   };
 
+  // ----------- Import JSON for categories -----------
+  const handleImportCategoryJSON = async () => {
+    if (!categoryImportText.trim()) {
+      alert("Vui lòng nhập dữ liệu JSON");
+      return;
+    }
+    setIsImportingCategory(true);
+    try {
+      // Parse JSON to check if it has vocabularies
+      const data = JSON.parse(categoryImportText);
+      if (!Array.isArray(data)) {
+        throw new Error("Dữ liệu phải là mảng JSON");
+      }
+
+      // Check if any category has vocabularies
+      const hasVocabularies = data.some(
+        (category: any) =>
+          category.vocabularies && Array.isArray(category.vocabularies)
+      );
+
+      if (hasVocabularies) {
+        // Import categories with vocabularies
+        const ok = await importCategoryJson(categoryImportText);
+        if (ok) {
+          await loadCategories(categoryPage);
+          alert("Đã import categories và vocabularies thành công từ JSON!");
+          setShowCategoryImportModal(false);
+          setCategoryImportText("");
+        } else {
+          alert("Import JSON thất bại!");
+        }
+      } else {
+        // Import categories only
+        const ok = await importCategoryJson(categoryImportText);
+        if (ok) {
+          await loadCategories(categoryPage);
+          alert("Đã import categories thành công từ JSON!");
+          setShowCategoryImportModal(false);
+          setCategoryImportText("");
+        } else {
+          alert("Import JSON thất bại!");
+        }
+      }
+    } catch (error: any) {
+      alert(`Lỗi import: ${error.message}`);
+    } finally {
+      setIsImportingCategory(false);
+    }
+  };
+
+  // ----------- Export JSON -----------
+  const handleExportJSON = () => {
+    if (categories.length === 0) {
+      alert("Không có dữ liệu để export");
+      return;
+    }
+
+    // Create export data with categories and their vocabularies
+    const exportData = categories.map((category) => {
+      // Get vocabularies for this category
+      const categoryWords = words.filter(
+        (word) => selectedCategory === category.id
+      );
+
+      return {
+        name: category.name,
+        nameJp: category.nameJp,
+        level: category.level,
+        description: category.description,
+        vocabularies: categoryWords.map((word) => ({
+          kanji: word.kanji,
+          hiragana: word.hiragana,
+          definition: word.meaning, // Map meaning to definition
+          example: word.example,
+          translation: word.exampleMeaning, // Map exampleMeaning to translation
+        })),
+      };
+    });
+
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `categories-vocabulary-export-${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (!confirm("Bạn có chắc chắn muốn xoá nhóm từ vựng này?")) return;
+    try {
+      await removeCategory(Number(categoryId));
+      alert("Xoá nhóm từ vựng thành công!");
+      loadCategories(categoryPage);
+      if (selectedCategory === categoryId) {
+        setSelectedCategory(null);
+        setWords([]);
+      }
+    } catch (error: any) {
+      alert(`Xoá nhóm từ vựng thất bại: ${error.message}`);
+    }
+  };
+
   // Pagination component for categories
   const Pagination = ({
     page,
@@ -293,6 +413,7 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 p-4">
       <div className="max-w-6xl mx-auto">
+        <AdminNav />
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
@@ -302,6 +423,25 @@ export default function AdminPage() {
             Quản lý các nhóm từ vựng và từ vựng trong hệ thống. Bạn có thể thêm,
             sửa, xoá nhóm từ vựng và từ vựng một cách dễ dàng.
           </p>
+          <div className="flex gap-3 mt-4">
+            <Button
+              onClick={() => setShowCategoryImportModal(true)}
+              variant="outline"
+              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+            >
+              <Upload className="h-4 w-4 mr-2" />
+              Import JSON
+            </Button>
+            <Button
+              onClick={handleExportJSON}
+              variant="outline"
+              className="border-green-500 text-green-600 hover:bg-green-50"
+              disabled={categories.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Export JSON
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -458,6 +598,17 @@ export default function AdminPage() {
                           {isImporting && (
                             <span className="ml-1 text-xs">Đang nhập...</span>
                           )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteCategory(category.id);
+                          }}
+                          title="Xoá nhóm từ vựng"
+                        >
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </div>
@@ -649,7 +800,9 @@ export default function AdminPage() {
                 <div className="text-2xl font-bold text-red-600">
                   {categories.length}
                 </div>
-                <p className="text-sm text-gray-600">Categories (trang hiện tại)</p>
+                <p className="text-sm text-gray-600">
+                  Categories (trang hiện tại)
+                </p>
               </div>
             </CardContent>
           </Card>
@@ -688,6 +841,107 @@ export default function AdminPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Import Categories JSON Modal */}
+      {showCategoryImportModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">
+                  Import Categories & Vocabulary JSON
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowCategoryImportModal(false);
+                    setCategoryImportText("");
+                  }}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              <div className="mb-4">
+                <h3 className="font-medium mb-2">Định dạng JSON mẫu:</h3>
+                <div className="bg-gray-100 p-3 rounded text-sm font-mono overflow-x-auto">
+                  <pre>{`[
+  {
+    "name": "Thể thao",
+    "nameJp": "スポーツ",
+    "level": "N5", 
+    "description": "Từ vựng thể thao",
+    "vocabularies": [
+      {
+        "kanji": "犬",
+        "hiragana": "いぬ",
+        "definition": "chó",
+        "example": "犬を飼っています。",
+        "translation": "Tôi nuôi một con chó."
+      }
+    ]
+  }
+]`}</pre>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium mb-2">
+                  Dán JSON data vào đây:
+                </label>
+                <Textarea
+                  value={categoryImportText}
+                  onChange={(e) => setCategoryImportText(e.target.value)}
+                  placeholder="Dán JSON data của các categories..."
+                  rows={12}
+                  className="font-mono text-sm"
+                />
+              </div>
+              <div className="text-sm text-gray-600 mb-4">
+                <ul className="list-disc list-inside space-y-1 mt-2">
+                  <li>Dữ liệu phải là mảng JSON hợp lệ</li>
+                  <li>Mỗi category cần có: name, nameJp, level, description</li>
+                  <li>Level phải là một trong: N5, N4, N3, N2, N1</li>
+                  <li>
+                    Vocabularies là tùy chọn - có thể import category trống
+                  </li>
+                  <li>Mỗi vocabulary cần có: kanji, hiragana, definition</li>
+                  <li>example và translation là tùy chọn</li>
+                </ul>
+              </div>
+            </div>
+            <div className="p-6 border-t bg-gray-50">
+              <div className="flex gap-3 justify-end">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowCategoryImportModal(false);
+                    setCategoryImportText("");
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button
+                  onClick={handleImportCategoryJSON}
+                  disabled={isImportingCategory || !categoryImportText.trim()}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isImportingCategory ? (
+                    <span className="animate-spin mr-2">
+                      <Upload className="h-4 w-4" />
+                    </span>
+                  ) : (
+                    <Upload className="h-4 w-4 mr-2" />
+                  )}
+                  {isImportingCategory ? "Đang import..." : "Import"}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

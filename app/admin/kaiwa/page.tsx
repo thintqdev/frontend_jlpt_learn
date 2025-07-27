@@ -32,6 +32,7 @@ import {
   Conversation,
   CreateConversationInput,
 } from "@/lib/conversation";
+import AdminNav from "@/components/admin-nav";
 
 interface ConversationLine {
   id: number;
@@ -63,7 +64,9 @@ export default function KaiwaAdminPage() {
   });
   const [showAddConversation, setShowAddConversation] = useState(false);
   const [isAddingConversation, setIsAddingConversation] = useState(false);
-  const [editingConversationId, setEditingConversationId] = useState<number | null>(null);
+  const [editingConversationId, setEditingConversationId] = useState<
+    number | null
+  >(null);
   const [conversationForm, setConversationForm] = useState({
     speaker: "A",
     jp: "",
@@ -93,7 +96,9 @@ export default function KaiwaAdminPage() {
             level: conv.level,
             category: conv.category,
             duration: conv.duration ?? "5 phút",
-            conversation: Array.isArray(conv.conversation) ? conv.conversation : [],
+            conversation: Array.isArray(conv.conversation)
+              ? conv.conversation
+              : [],
           }))
         );
       } catch (error) {
@@ -173,7 +178,9 @@ export default function KaiwaAdminPage() {
       if (editingConversationId) {
         // Edit existing line
         updatedConversation = selectedKaiwa.conversation.map((line) =>
-          line.id === editingConversationId ? { ...line, ...conversationForm } : line
+          line.id === editingConversationId
+            ? { ...line, ...conversationForm }
+            : line
         );
       } else {
         // Add new line
@@ -293,7 +300,9 @@ export default function KaiwaAdminPage() {
           level: conv.level,
           category: conv.category,
           duration: conv.duration ?? "5 phút",
-          conversation: Array.isArray(conv.conversation) ? conv.conversation : [],
+          conversation: Array.isArray(conv.conversation)
+            ? conv.conversation
+            : [],
         }))
       );
 
@@ -356,12 +365,14 @@ export default function KaiwaAdminPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4">
       <div className="max-w-6xl mx-auto">
+        <AdminNav />
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Admin | Hội thoại tiếng Nhật (Kaiwa)
           </h1>
           <p className="text-gray-600">
-            Quản lý các bài hội thoại tiếng Nhật với romaji và bản dịch tiếng Việt.
+            Quản lý các bài hội thoại tiếng Nhật với romaji và bản dịch tiếng
+            Việt.
           </p>
 
           <div className="flex gap-3 mt-4">
@@ -392,8 +403,8 @@ export default function KaiwaAdminPage() {
                 className="border-none outline-none shadow-none p-0"
                 placeholder="Tìm bài hội thoại theo tên..."
                 value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
-                onKeyDown={e => {
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
                   if (e.key === "Enter") setSearch(searchInput);
                 }}
               />
@@ -450,7 +461,9 @@ export default function KaiwaAdminPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle>Bài hội thoại</CardTitle>
-                  <CardDescription>Quản lý các bài hội thoại Kaiwa</CardDescription>
+                  <CardDescription>
+                    Quản lý các bài hội thoại Kaiwa
+                  </CardDescription>
                 </div>
                 <Button onClick={() => setShowAddKaiwa(true)} size="sm">
                   <Plus className="h-4 w-4 mr-2" /> Thêm bài hội thoại
@@ -804,7 +817,9 @@ export default function KaiwaAdminPage() {
                   </p>
                   <ul className="list-disc list-inside space-y-1 mt-2">
                     <li>Dữ liệu phải là mảng JSON hợp lệ</li>
-                    <li>Mỗi kaiwa cần có: title, level, category, conversation</li>
+                    <li>
+                      Mỗi kaiwa cần có: title, level, category, conversation
+                    </li>
                     <li>Mỗi dòng hội thoại cần có: speaker, jp, vi</li>
                     <li>Romaji và duration là tùy chọn</li>
                     <li>ID sẽ được tự động tạo</li>
