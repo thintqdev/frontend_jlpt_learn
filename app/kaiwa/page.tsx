@@ -171,7 +171,7 @@ export default function KaiwaDailyPage() {
                     }`}
                   >
                     <div
-                      className={`max-w-full sm:max-w-[85%] rounded-xl px-4 py-3 shadow-sm border ${
+                      className={`max-w-full sm:max-w-[85%]  px-4 py-3 shadow-sm border ${
                         isRight
                           ? "bg-rose-50 border-rose-200 ml-auto"
                           : "bg-gray-50 border-gray-200"
@@ -290,7 +290,7 @@ export default function KaiwaDailyPage() {
               {pagedKaiwa.map((kaiwa) => (
                 <Card
                   key={kaiwa.id}
-                  className="border hover:border-rose-300 hover:shadow transition-all duration-200 rounded-xl group"
+                  className="border hover:border-rose-300 hover:shadow transition-all duration-200  group"
                   onClick={() => setSelectedKaiwa(kaiwa)}
                 >
                   <CardContent className="p-4">

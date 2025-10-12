@@ -324,7 +324,7 @@ export default function MemoryPage() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-screen px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+          <div className="w-full max-w-md bg-white  shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu
             </h1>
@@ -443,7 +443,7 @@ export default function MemoryPage() {
                 disabled={
                   card.isFlipped || card.isMatched || flippedCards.length >= 2
                 }
-                className={`aspect-square rounded-xl border-2 transition-all duration-300 ${
+                className={`aspect-square  border-2 transition-all duration-300 ${
                   card.isMatched
                     ? "border-green-500 bg-green-50"
                     : card.isFlipped

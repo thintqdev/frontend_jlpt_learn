@@ -27,6 +27,39 @@ export async function getVocabulariesByCategory(categoryId: number) {
   return result.data.vocabulariesByCategory;
 }
 
+// API search vocabulary theo hiragana hoặc kanji (trả về 1 từ duy nhất)
+export async function searchVocabulary(searchText: string) {
+  const query = `
+    query($searchText: String!) {
+      searchVocabulary(searchText: $searchText) {
+        id
+        kanji
+        hiragana
+        definition
+        example
+        translation
+        is_learned
+        category {
+          id
+          name
+          nameJp
+          level
+        }
+      }
+    }
+  `;
+  const apiUrl =
+    process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BASE_URL;
+  const response = await fetch(`${apiUrl}/graphql`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ query, variables: { searchText } }),
+  });
+  const result = await response.json();
+  if (result.errors) throw new Error(result.errors[0].message);
+  return result.data.searchVocabulary;
+}
+
 // API lấy tất cả vocabularies
 export async function getAllVocabularies() {
   const query = `

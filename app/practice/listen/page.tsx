@@ -186,7 +186,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-screen  px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+          <div className="w-full max-w-md bg-white  shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu nghe chọn đáp án
             </h1>
@@ -280,7 +280,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
     return (
       <AppLayout>
         <div className="min-h-screen flex flex-col items-center justify-center">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-8 mt-12">
+          <div className="w-full max-w-md bg-white  shadow p-8 mt-12">
             <div className="text-center mb-6">
               <div className="text-5xl mb-3">
                 {accuracy >= 80 ? "🎉" : accuracy >= 60 ? "👏" : "💪"}
@@ -395,7 +395,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
           <div className="space-y-3 mb-8">
             {q.options.map((opt: Word, idx: number) => {
               let buttonClass =
-                "w-full p-4 text-left border-2 rounded-xl transition-all duration-200 ";
+                "w-full p-4 text-left border-2  transition-all duration-200 ";
               if (showResult) {
                 if (opt.id === q.answer.id) {
                   buttonClass += "border-green-500 bg-green-50 text-green-700";
@@ -435,7 +435,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
           </div>
           {/* Hiển thị lại câu ví dụ với highlight đáp án đúng */}
           {showResult && showSentence && (
-            <div className="mt-8 p-6 bg-white rounded-xl shadow text-center border border-primary-100">
+            <div className="mt-8 p-6 bg-white  shadow text-center border border-primary-100">
               <div className="text-lg font-semibold text-primary-700 mb-2">
                 Câu ví dụ:
               </div>

@@ -133,7 +133,7 @@ export default function GrammarDetailPage() {
             {grammar.usages?.map((usage: any, idx: number) => (
               <div
                 key={usage.id}
-                className="border rounded-xl bg-white/80 shadow-sm p-6 backdrop-blur-sm"
+                className="border  bg-white/80 shadow-sm p-6 backdrop-blur-sm"
               >
                 <div className="mb-3">
                   <div className="flex items-center gap-2 mb-1">

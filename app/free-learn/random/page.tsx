@@ -117,7 +117,7 @@ export default function FreeLearnRandomPage() {
           </div>
 
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-400 to-purple-600  flex items-center justify-center">
               <Shuffle className="h-6 w-6 text-white" />
             </div>
             <div>

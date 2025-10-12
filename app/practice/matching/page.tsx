@@ -158,7 +158,7 @@ export default function MatchingPage() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-screen px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+          <div className="w-full max-w-md bg-white  shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu
             </h1>
@@ -346,7 +346,7 @@ export default function MatchingPage() {
                     key={`kanji-${item.id}`}
                     onClick={() => handleKanjiSelect(item.id)}
                     disabled={item.matched}
-                    className={`w-full p-4 h-16 rounded-xl border-2 transition-all duration-200 ${
+                    className={`w-full p-4 h-16  border-2 transition-all duration-200 ${
                       item.matched
                         ? "border-green-500 bg-green-50 text-green-700"
                         : selectedKanji === item.id
@@ -373,7 +373,7 @@ export default function MatchingPage() {
                     key={`meaning-${item.id}`}
                     onClick={() => handleMeaningSelect(item.id)}
                     disabled={item.matched}
-                    className={`w-full p-4 h-16 rounded-xl border-2 transition-all duration-200 ${
+                    className={`w-full p-4 h-16  border-2 transition-all duration-200 ${
                       item.matched
                         ? "border-green-500 bg-green-50 text-green-700"
                         : selectedMeaning === item.id

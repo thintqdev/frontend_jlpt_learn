@@ -366,7 +366,7 @@ export default function KaiwaDetailPage() {
                     initial={{ scale: 0.98, opacity: 0.8 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.4 }}
-                    className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4"
+                    className="bg-green-50 border border-green-200  p-4 mb-4"
                   >
                     <p className="text-green-700 font-bold mb-2">
                       🎯 Lượt của bạn!
@@ -377,7 +377,7 @@ export default function KaiwaDetailPage() {
                     initial={{ scale: 0.98, opacity: 0.8 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.4, delay: 0.15 }}
-                    className="bg-primary-50 rounded-xl p-4 shadow"
+                    className="bg-primary-50  p-4 shadow"
                   >
                     <div className="flex items-center justify-center space-x-2 mb-2">
                       <span className="japanese-text text-2xl font-bold tracking-wider">
@@ -433,7 +433,7 @@ export default function KaiwaDetailPage() {
                     initial={{ scale: 0.98, opacity: 0.8 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.4 }}
-                    className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4"
+                    className="bg-blue-50 border border-blue-200  p-4 mb-4"
                   >
                     <p className="text-blue-700 font-bold mb-2">
                       👥 Vai {currentLine?.speaker} nói:
@@ -443,7 +443,7 @@ export default function KaiwaDetailPage() {
                     initial={{ scale: 0.98, opacity: 0.8 }}
                     animate={{ scale: 1, opacity: 1 }}
                     transition={{ duration: 0.4, delay: 0.15 }}
-                    className="bg-blue-50 rounded-xl p-4 shadow"
+                    className="bg-blue-50  p-4 shadow"
                   >
                     <div className="flex items-center justify-center space-x-2 mb-2">
                       <span className="japanese-text text-2xl font-bold tracking-wider">

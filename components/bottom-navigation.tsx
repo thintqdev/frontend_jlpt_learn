@@ -12,6 +12,7 @@ import {
   TrendingUp,
   BookAudio,
   MessageCircle,
+  BookCheck,
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -36,12 +37,12 @@ export default function BottomNavigation() {
       label: "Luyện tập",
       active: pathname.startsWith("/practice"),
     },
-    {
-      href: "/free-learn",
-      icon: Brain,
-      label: "Free Learn",
-      active: pathname.startsWith("/free-learn"),
-    },
+    // {
+    //   href: "/free-learn",
+    //   icon: Brain,
+    //   label: "Free Learn",
+    //   active: pathname.startsWith("/free-learn"),
+    // },
     {
       href: "/grammar",
       icon: BookOpen,
@@ -59,6 +60,12 @@ export default function BottomNavigation() {
       icon: MessageCircle,
       label: "Kaiwa",
       active: pathname.startsWith("/kaiwa"),
+    },
+    {
+      href: "/reading",
+      icon: BookCheck,
+      label: "Đọc hiểu",
+      active: pathname.startsWith("/reading"),
     },
     // {
     //   href: "/profile",

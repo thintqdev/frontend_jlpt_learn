@@ -2,18 +2,8 @@
 
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import {
-  BookOpen,
-  Mic,
-  FileText,
-  Brain,
-  Award,
-  Clock,
-  Play,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { BookOpen, Mic, FileText, Brain } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import AppLayout from "@/components/app-layout";
 
 export default function HomePage() {
@@ -55,50 +45,17 @@ export default function HomePage() {
   return (
     <AppLayout>
       {/* Header */}
-      <div className="bg-gradient-to-br from-primary-500 to-primary-700 text-white px-6 py-10 rounded-b-3xl shadow-md">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white px-6 py-10 shadow-md">
+        <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold">Xin chào! 👋</h1>
+            <h1 className="text-2xl font-bold">Xin chào bạn! 👋</h1>
             <p className="text-sm text-primary-100">Hôm nay bạn học gì?</p>
           </div>
           <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center">
             🇯🇵
           </div>
         </div>
-        <div className="grid grid-cols-3 gap-4 text-center text-sm">
-          <div>
-            <div className="text-xl font-bold">15</div>
-            <div className="text-primary-100">Ngày streak</div>
-          </div>
-          <div>
-            <div className="text-xl font-bold">127</div>
-            <div className="text-primary-100">Từ đã học</div>
-          </div>
-          <div>
-            <div className="text-xl font-bold">N3</div>
-            <div className="text-primary-100">Trình độ</div>
-          </div>
-        </div>
       </div>
-
-      {/* Mục tiêu hôm nay */}
-      <section className="px-6 mt-6">
-        <Card className="shadow-sm border-none">
-          <CardContent className="p-4">
-            <div className="flex justify-between mb-2">
-              <h3 className="font-semibold text-gray-800">Mục tiêu hôm nay</h3>
-              <Badge className="bg-green-100 text-green-700">8/10 từ</Badge>
-            </div>
-            <div className="w-full h-2 bg-gray-200 rounded-full mb-1">
-              <div
-                className="h-2 bg-green-500 rounded-full"
-                style={{ width: "80%" }}
-              />
-            </div>
-            <p className="text-xs text-gray-500">Còn 2 từ nữa là hoàn thành!</p>
-          </CardContent>
-        </Card>
-      </section>
 
       {/* Tính năng chính */}
       <section className="px-6 mt-6">
@@ -138,7 +95,7 @@ export default function HomePage() {
       </section>
 
       {/* Gợi ý hôm nay */}
-      <section className="px-6 mt-6">
+      {/* <section className="px-6 mt-6">
         <h3 className="text-lg font-bold text-gray-900 mb-3">Gợi ý hôm nay</h3>
         <Card className="shadow-md border-none">
           <CardContent className="p-4 flex items-center justify-between">
@@ -153,10 +110,10 @@ export default function HomePage() {
             </Link>
           </CardContent>
         </Card>
-      </section>
+      </section> */}
 
       {/* Chủ đề từ vựng */}
-      <section className="px-6 mt-6">
+      {/* <section className="px-6 mt-6">
         <div className="flex justify-between items-center mb-3">
           <h3 className="text-lg font-bold text-gray-900">Chủ đề từ vựng</h3>
           <Link href="/vocabulary">
@@ -192,10 +149,10 @@ export default function HomePage() {
             ))}
           </div>
         )}
-      </section>
+      </section> */}
 
       {/* Hoạt động gần đây */}
-      <section className="px-6 mt-6 mb-10">
+      {/* <section className="px-6 mt-6 mb-10">
         <h3 className="text-lg font-bold text-gray-900 mb-3">
           Hoạt động gần đây
         </h3>
@@ -211,6 +168,19 @@ export default function HomePage() {
             time="Hôm qua"
           />
         </div>
+      </section> */}
+
+      {/* Ủng hộ */}
+      <section className="px-6 mt-6 mb-10">
+        <h3 className="text-lg font-bold text-gray-900 mb-3">Ủng hộ</h3>
+        <Card className="shadow-sm border-none">
+          <CardContent className="p-4 text-center">
+            <p className="mb-4">
+              Hãy ủng hộ chúng tôi để duy trì và phát triển ứng dụng!
+            </p>
+            <img src="/qr.jpeg" alt="QR Donate" className="mx-auto w-48 h-64" />
+          </CardContent>
+        </Card>
       </section>
     </AppLayout>
   );
@@ -244,7 +214,7 @@ function RecentActivity({
   time: string;
 }) {
   return (
-    <div className="flex items-center space-x-3 p-3 bg-white rounded-xl shadow-sm">
+    <div className="flex items-center space-x-3 p-3 bg-white  shadow-sm">
       <div className="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
         {icon}
       </div>

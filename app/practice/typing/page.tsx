@@ -160,7 +160,7 @@ export default function TypingPage() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-screen  px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+          <div className="w-full max-w-md bg-white  shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu
             </h1>

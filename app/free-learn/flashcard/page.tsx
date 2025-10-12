@@ -167,7 +167,7 @@ export default function FreeLearnFlashcardPage() {
           </div>
 
           <div className="flex items-center space-x-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600  flex items-center justify-center">
               <span className="text-white text-lg font-bold">📚</span>
             </div>
             <div>
@@ -207,7 +207,7 @@ export default function FreeLearnFlashcardPage() {
                     isFlipped ? "opacity-0" : "opacity-100"
                   }`}
                 >
-                  <CardContent className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-primary-500 to-primary-600 text-white rounded-xl">
+                  <CardContent className="h-full flex flex-col items-center justify-center p-8 bg-gradient-to-br from-primary-500 to-primary-600 text-white ">
                     <div className="text-center space-y-6">
                       <div className="space-y-3">
                         <div className="text-5xl japanese-text font-bold">
@@ -249,7 +249,7 @@ export default function FreeLearnFlashcardPage() {
                     isFlipped ? "opacity-100" : "opacity-0"
                   }`}
                 >
-                  <CardContent className="h-full flex flex-col justify-center p-6 bg-white rounded-xl">
+                  <CardContent className="h-full flex flex-col justify-center p-6 bg-white ">
                     <div className="space-y-6">
                       <div className="text-center">
                         <div className="text-xl japanese-text text-primary-600 font-bold mb-2">

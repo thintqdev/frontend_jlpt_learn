@@ -173,7 +173,7 @@ export default function ExercisePage() {
               <div className="h-12 bg-gray-200 rounded mb-4"></div>
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-32 bg-gray-200 rounded-xl"></div>
+                  <div key={i} className="h-32 bg-gray-200 "></div>
                 ))}
               </div>
             </div>
@@ -245,7 +245,7 @@ export default function ExercisePage() {
                           role="button"
                           tabIndex={0}
                           aria-checked={isSelected}
-                          className={`flex items-center gap-3 px-4 py-3 rounded-xl border transition-colors text-base font-medium select-none cursor-pointer outline-none
+                          className={`flex items-center gap-3 px-4 py-3  border transition-colors text-base font-medium select-none cursor-pointer outline-none
                             ${
                               showResult && isSelected
                                 ? isCorrect
@@ -315,7 +315,7 @@ export default function ExercisePage() {
           </div>
           {questions.length > 0 && !showResult && (
             <Button
-              className="mt-10 w-full rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-semibold text-base py-3 shadow-lg text-lg tracking-wide"
+              className="mt-10 w-full  bg-rose-500 hover:bg-rose-600 text-white font-semibold text-base py-3 shadow-lg text-lg tracking-wide"
               onClick={handleCheck}
               disabled={Object.keys(answers).length !== questions.length}
             >

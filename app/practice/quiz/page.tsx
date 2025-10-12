@@ -163,7 +163,7 @@ export default function QuizPage() {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-screen  px-4">
-          <div className="w-full max-w-md bg-white rounded-xl shadow p-6">
+          <div className="w-full max-w-md bg-white  shadow p-6">
             <h1 className="text-2xl font-bold mb-4 text-center">
               Chọn chủ đề để bắt đầu Quiz
             </h1>
@@ -401,7 +401,7 @@ export default function QuizPage() {
           <div className="space-y-3 mb-8">
             {question.options.map((option, index) => {
               let buttonClass =
-                "w-full p-4 text-left border-2 rounded-xl transition-all duration-200 ";
+                "w-full p-4 text-left border-2  transition-all duration-200 ";
 
               if (showResult) {
                 if (index === question.correct) {
