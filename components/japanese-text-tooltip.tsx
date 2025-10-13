@@ -131,8 +131,6 @@ export default function JapaneseTextTooltip({
 
       fetchShortCategories()
         .then((data: any) => {
-          console.log("Categories data:", data); // Debug log
-
           // Handle different possible response structures
           let items: any[] = [];
           if (Array.isArray(data)) {
@@ -866,7 +864,7 @@ export default function JapaneseTextTooltip({
               >
                 {loadedCategories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.name} ({category.nameJp}) - {category.level}
+                    {category.name} ({category.nameJp})
                   </option>
                 ))}
               </select>

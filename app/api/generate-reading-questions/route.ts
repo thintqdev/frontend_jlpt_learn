@@ -11,7 +11,8 @@ const model = genAI.getGenerativeModel({
 		topP: 0.8,
 		maxOutputTokens: 4000,  // Tăng tokens cho vocabulary và grammar
 	}
-}); export async function POST(request: NextRequest) {
+});
+export async function POST(request: NextRequest) {
 	try {
 		const { content, level = "N3" } = await request.json();
 

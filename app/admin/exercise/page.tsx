@@ -48,7 +48,14 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
-import { Plus, Upload, MoreVertical, Edit, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Upload,
+  MoreVertical,
+  Edit,
+  Trash2,
+  Sparkles,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   getQuestions,
@@ -66,6 +73,7 @@ const emptyQuestion: Omit<Question, "id"> = {
   question: "",
   options: ["", "", "", ""],
   correctAnswer: 0,
+  type: "VOCABULARY",
   level: "N3",
   explanation: "",
 };
@@ -84,11 +92,43 @@ export default function QuestionAdminPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [isAIGenerateDialogOpen, setIsAIGenerateDialogOpen] = useState(false);
+  const [aiFormData, setAiFormData] = useState({
+    count: 5,
+    level: "N3" as "N1" | "N2" | "N3" | "N4" | "N5",
+    type: "VOCABULARY" as
+      | "KANJI_SELECTION"
+      | "HIRAGANA"
+      | "VOCABULARY"
+      | "SYNONYMS_ANTONYMS"
+      | "CONTEXTUAL_WORDS"
+      | "GRAMMAR"
+      | "JLPT_FORMAT",
+  });
+  const [generating, setGenerating] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<string | null>(null);
   const [importFile, setImportFile] = useState<File | null>(null);
+  const [previewQuestions, setPreviewQuestions] = useState<Question[]>([]);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [editingPreviewIndex, setEditingPreviewIndex] = useState<number | null>(
+    null
+  );
 
   // Fetch questions from API
+  const getTypeLabel = (type: string) => {
+    const labels = {
+      KANJI_SELECTION: "Kanji",
+      HIRAGANA: "Hiragana",
+      VOCABULARY: "Từ vựng",
+      SYNONYMS_ANTONYMS: "Đồng/Trái nghĩa",
+      CONTEXTUAL_WORDS: "Ngữ cảnh",
+      GRAMMAR: "Ngữ pháp",
+      JLPT_FORMAT: "JLPT (*)",
+    };
+    return labels[type as keyof typeof labels] || type;
+  };
+
   const fetchQuestions = async () => {
     setLoading(true);
     try {
@@ -225,6 +265,144 @@ export default function QuestionAdminPage() {
     }
   };
 
+  const handleAIGenerate = async () => {
+    if (aiFormData.count < 1 || aiFormData.count > 20) {
+      alert("Số lượng câu hỏi phải từ 1 đến 20.");
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch("/api/generate-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiFormData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate questions");
+      }
+
+      const data = await response.json();
+
+      if (data.questions && Array.isArray(data.questions)) {
+        // Add generated questions to database
+        for (const question of data.questions) {
+          await createQuestion({
+            ...question,
+            type: aiFormData.type,
+            level: aiFormData.level,
+          });
+        }
+
+        alert(`Đã tạo thành công ${data.questions.length} câu hỏi!`);
+        setIsAIGenerateDialogOpen(false);
+        await fetchQuestions();
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      alert("Không thể tạo câu hỏi. Vui lòng thử lại.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handlePreview = async () => {
+    if (aiFormData.count < 1 || aiFormData.count > 20) {
+      alert("Số lượng câu hỏi phải từ 1 đến 20.");
+      return;
+    }
+
+    setGenerating(true);
+    try {
+      const response = await fetch("/api/generate-questions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(aiFormData),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate questions");
+      }
+
+      const data = await response.json();
+
+      if (data.questions && Array.isArray(data.questions)) {
+        setPreviewQuestions(data.questions);
+        setIsPreviewMode(true);
+      } else {
+        throw new Error("Invalid response format");
+      }
+    } catch (error) {
+      console.error("Error generating questions:", error);
+      alert("Không thể tạo câu hỏi. Vui lòng thử lại.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleConfirmGenerate = async () => {
+    setGenerating(true);
+    try {
+      // Add generated questions to database
+      for (const question of previewQuestions) {
+        await createQuestion({
+          ...question,
+          type: aiFormData.type,
+          level: aiFormData.level,
+        });
+      }
+
+      alert(`Đã tạo thành công ${previewQuestions.length} câu hỏi!`);
+      setIsAIGenerateDialogOpen(false);
+      setIsPreviewMode(false);
+      setPreviewQuestions([]);
+      setEditingPreviewIndex(null);
+      await fetchQuestions();
+    } catch (error) {
+      console.error("Error saving questions:", error);
+      alert("Không thể lưu câu hỏi. Vui lòng thử lại.");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  const handleEditPreviewQuestion = (
+    index: number,
+    field: keyof Question,
+    value: any
+  ) => {
+    const updatedQuestions = [...previewQuestions];
+    updatedQuestions[index] = { ...updatedQuestions[index], [field]: value };
+    setPreviewQuestions(updatedQuestions);
+  };
+
+  const handleEditPreviewOption = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
+    const updatedQuestions = [...previewQuestions];
+    const newOptions = [...updatedQuestions[questionIndex].options];
+    newOptions[optionIndex] = value;
+    updatedQuestions[questionIndex] = {
+      ...updatedQuestions[questionIndex],
+      options: newOptions,
+    };
+    setPreviewQuestions(updatedQuestions);
+  };
+
+  const handleDeletePreviewQuestion = (index: number) => {
+    const updatedQuestions = previewQuestions.filter((_, i) => i !== index);
+    setPreviewQuestions(updatedQuestions);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <AdminNav />
@@ -246,6 +424,15 @@ export default function QuestionAdminPage() {
                 <CardDescription>Tìm thấy {total} câu hỏi.</CardDescription>
               </div>
               <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAIGenerateDialogOpen(true)}
+                  disabled={loading || actionLoading}
+                  className="bg-purple-50 hover:bg-purple-100 border-purple-200"
+                >
+                  <Sparkles className="h-4 w-4 mr-2" />
+                  Tạo bằng AI
+                </Button>
                 <Button
                   variant="outline"
                   onClick={() => setIsImportDialogOpen(true)}
@@ -300,6 +487,7 @@ export default function QuestionAdminPage() {
                     <TableRow>
                       <TableHead className="w-[50px]">ID</TableHead>
                       <TableHead>Câu hỏi</TableHead>
+                      <TableHead>Loại</TableHead>
                       <TableHead>Đáp án đúng</TableHead>
                       <TableHead>Trình độ</TableHead>
                       <TableHead className="w-[50px] text-right">
@@ -313,6 +501,11 @@ export default function QuestionAdminPage() {
                         <TableCell className="font-medium">{q.id}</TableCell>
                         <TableCell>
                           {highlightGrammarInSentence(q.question)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {getTypeLabel(q.type)}
+                          </Badge>
                         </TableCell>
                         <TableCell className="text-green-600 font-semibold">
                           {q.options[q.correctAnswer]}
@@ -448,22 +641,29 @@ export default function QuestionAdminPage() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Select
-                value={String(questionFormData.correctAnswer)}
-                onValueChange={(val) =>
-                  handleFormChange("correctAnswer", Number(val))
-                }
+                value={questionFormData.type}
+                onValueChange={(val) => handleFormChange("type", val)}
                 disabled={actionLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Chọn đáp án đúng" />
+                  <SelectValue placeholder="Chọn loại bài tập" />
                 </SelectTrigger>
                 <SelectContent>
-                  {questionFormData.options.map((opt, idx) => (
-                    <SelectItem key={idx} value={String(idx)} disabled={!opt}>
-                      Đáp án {idx + 1}
-                      {opt ? `: ${opt}` : ""}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="KANJI_SELECTION">
+                    Chọn chữ kanji
+                  </SelectItem>
+                  <SelectItem value="HIRAGANA">Bài tập hiragana</SelectItem>
+                  <SelectItem value="VOCABULARY">Từ vựng</SelectItem>
+                  <SelectItem value="SYNONYMS_ANTONYMS">
+                    Đồng/trái nghĩa
+                  </SelectItem>
+                  <SelectItem value="CONTEXTUAL_WORDS">
+                    Từ phù hợp ngữ cảnh
+                  </SelectItem>
+                  <SelectItem value="GRAMMAR">Ngữ pháp</SelectItem>
+                  <SelectItem value="JLPT_FORMAT">
+                    Định dạng JLPT (*)
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <Select
@@ -584,6 +784,381 @@ export default function QuestionAdminPage() {
                 "Import"
               )}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog for AI Generate */}
+      <Dialog
+        open={isAIGenerateDialogOpen}
+        onOpenChange={(open) => {
+          setIsAIGenerateDialogOpen(open);
+          if (!open) {
+            setIsPreviewMode(false);
+            setPreviewQuestions([]);
+            setEditingPreviewIndex(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5" />
+              {isPreviewMode ? "Xem trước câu hỏi" : "Tạo câu hỏi bằng AI"}
+            </DialogTitle>
+            <DialogDescription>
+              {isPreviewMode
+                ? "Xem trước các câu hỏi sẽ được tạo. Nhấn 'Tạo câu hỏi' để lưu vào cơ sở dữ liệu."
+                : "Sử dụng AI để tạo câu hỏi trắc nghiệm theo định dạng JLPT."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Số lượng câu hỏi
+                </label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={aiFormData.count}
+                  onChange={(e) =>
+                    setAiFormData((prev) => ({
+                      ...prev,
+                      count: Number(e.target.value),
+                    }))
+                  }
+                  disabled={generating || isPreviewMode}
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-2 block">
+                  Trình độ
+                </label>
+                <Select
+                  value={aiFormData.level}
+                  onValueChange={(val: any) =>
+                    setAiFormData((prev) => ({ ...prev, level: val }))
+                  }
+                  disabled={generating || isPreviewMode}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="N5">N5</SelectItem>
+                    <SelectItem value="N4">N4</SelectItem>
+                    <SelectItem value="N3">N3</SelectItem>
+                    <SelectItem value="N2">N2</SelectItem>
+                    <SelectItem value="N1">N1</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium mb-2 block">
+                Loại bài tập
+              </label>
+              <Select
+                value={aiFormData.type}
+                onValueChange={(val: any) =>
+                  setAiFormData((prev) => ({ ...prev, type: val }))
+                }
+                disabled={generating || isPreviewMode}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="KANJI_SELECTION">
+                    Chọn chữ kanji (kanji → hiragana)
+                  </SelectItem>
+                  <SelectItem value="HIRAGANA">Bài tập hiragana</SelectItem>
+                  <SelectItem value="VOCABULARY">Từ vựng</SelectItem>
+                  <SelectItem value="SYNONYMS_ANTONYMS">
+                    Đồng/trái nghĩa
+                  </SelectItem>
+                  <SelectItem value="CONTEXTUAL_WORDS">
+                    Từ phù hợp ngữ cảnh
+                  </SelectItem>
+                  <SelectItem value="GRAMMAR">Ngữ pháp</SelectItem>
+                  <SelectItem value="JLPT_FORMAT">
+                    Định dạng JLPT (*)
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="bg-blue-50 p-4 rounded-lg">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">
+                Định dạng câu hỏi:
+              </h4>
+              <div className="text-sm text-blue-700">
+                {aiFormData.type === "KANJI_SELECTION" &&
+                  "Từ kanji được viết bằng chữ kanji thật, đáp án đúng là phiên âm hiragana"}
+                {aiFormData.type === "HIRAGANA" &&
+                  "Chữ hiragana đúng sẽ được gạch ngang _ひらがな_, các đáp án gây nhiễu tốt"}
+                {aiFormData.type === "VOCABULARY" &&
+                  "Chỗ trống dạng _物事_ để điền từ vựng phù hợp"}
+                {aiFormData.type === "GRAMMAR" &&
+                  "Chỗ trống dạng _物事_ để điền cấu trúc ngữ pháp"}
+                {aiFormData.type === "SYNONYMS_ANTONYMS" &&
+                  "Từ được bôi đậm, chọn từ đồng/trái nghĩa phù hợp nhất"}
+                {aiFormData.type === "CONTEXTUAL_WORDS" &&
+                  "Chọn từ phù hợp nhất với ngữ cảnh"}
+                {aiFormData.type === "JLPT_FORMAT" &&
+                  "Định dạng _ _ * _ _ với 4 chỗ trống"}
+              </div>
+            </div>
+          </div>
+
+          {isPreviewMode && previewQuestions.length > 0 && (
+            <div className="border-t pt-4">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium">
+                  Câu hỏi sẽ được tạo ({previewQuestions.length}):
+                </h4>
+                <div className="text-xs text-gray-500">
+                  Click vào từng câu hỏi để chỉnh sửa
+                </div>
+              </div>
+              <div className="max-h-96 overflow-y-auto space-y-3">
+                {previewQuestions.map((question, index) => (
+                  <div
+                    key={index}
+                    className={`bg-gray-50 p-3 rounded-lg cursor-pointer transition-colors ${
+                      editingPreviewIndex === index
+                        ? "ring-2 ring-blue-500 bg-blue-50"
+                        : "hover:bg-gray-100"
+                    }`}
+                    onClick={() =>
+                      setEditingPreviewIndex(
+                        editingPreviewIndex === index ? null : index
+                      )
+                    }
+                  >
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        {editingPreviewIndex === index ? (
+                          <div>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-xs font-medium text-blue-600">
+                                Đang chỉnh sửa
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingPreviewIndex(null);
+                                }}
+                                className="text-xs h-6 px-2"
+                              >
+                                Xong
+                              </Button>
+                            </div>
+                            <Textarea
+                              value={question.question}
+                              onChange={(e) =>
+                                handleEditPreviewQuestion(
+                                  index,
+                                  "question",
+                                  e.target.value
+                                )
+                              }
+                              onClick={(e) => e.stopPropagation()}
+                              className="text-sm mb-2"
+                              rows={2}
+                            />
+                          </div>
+                        ) : (
+                          <div className="font-medium text-sm mb-2">
+                            Câu {index + 1}:{" "}
+                            {highlightGrammarInSentence(question.question)}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeletePreviewQuestion(index);
+                        }}
+                        className="text-red-500 hover:text-red-700 ml-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      {question.options.map((option, optIndex) => (
+                        <div
+                          key={optIndex}
+                          className={`p-2 rounded ${
+                            optIndex === question.correctAnswer
+                              ? "bg-green-100 text-green-800 font-medium border-2 border-green-300"
+                              : "bg-white border"
+                          }`}
+                        >
+                          {editingPreviewIndex === index ? (
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="radio"
+                                name={`correct-${index}`}
+                                checked={optIndex === question.correctAnswer}
+                                onChange={() =>
+                                  handleEditPreviewQuestion(
+                                    index,
+                                    "correctAnswer",
+                                    optIndex
+                                  )
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-3 h-3"
+                              />
+                              <Input
+                                value={option}
+                                onChange={(e) =>
+                                  handleEditPreviewOption(
+                                    index,
+                                    optIndex,
+                                    e.target.value
+                                  )
+                                }
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-xs h-6"
+                                placeholder={`Đáp án ${optIndex + 1}`}
+                              />
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`w-3 h-3 rounded-full border-2 ${
+                                  optIndex === question.correctAnswer
+                                    ? "bg-green-500 border-green-500"
+                                    : "border-gray-300"
+                                }`}
+                              />
+                              <span>
+                                {optIndex + 1}. {option}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+
+                    {editingPreviewIndex === index ? (
+                      <Textarea
+                        value={question.explanation || ""}
+                        onChange={(e) =>
+                          handleEditPreviewQuestion(
+                            index,
+                            "explanation",
+                            e.target.value
+                          )
+                        }
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs mt-2"
+                        rows={1}
+                        placeholder="Giải thích (không bắt buộc)"
+                      />
+                    ) : (
+                      question.explanation && (
+                        <div className="text-xs text-gray-600 mt-2">
+                          <strong>Giải thích:</strong> {question.explanation}
+                        </div>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            {isPreviewMode ? (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsPreviewMode(false);
+                    setPreviewQuestions([]);
+                    setEditingPreviewIndex(null);
+                  }}
+                  disabled={generating}
+                >
+                  Quay lại
+                </Button>
+                <Button onClick={handleConfirmGenerate} disabled={generating}>
+                  {generating ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8z"
+                        ></path>
+                      </svg>
+                      Đang lưu...
+                    </span>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Tạo câu hỏi ({previewQuestions.length})
+                    </>
+                  )}
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsAIGenerateDialogOpen(false)}
+                  disabled={generating}
+                >
+                  Huỷ
+                </Button>
+                <Button onClick={handlePreview} disabled={generating}>
+                  {generating ? (
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8z"
+                        ></path>
+                      </svg>
+                      Đang sinh...
+                    </span>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Sinh câu hỏi
+                    </>
+                  )}
+                </Button>
+              </>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

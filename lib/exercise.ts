@@ -5,6 +5,7 @@ export interface Question {
   question: string;
   options: string[];
   correctAnswer: number;
+  type: "KANJI_SELECTION" | "HIRAGANA" | "VOCABULARY" | "SYNONYMS_ANTONYMS" | "CONTEXTUAL_WORDS" | "GRAMMAR" | "JLPT_FORMAT";
   level: "N1" | "N2" | "N3" | "N4" | "N5";
   explanation?: string;
 }
@@ -27,6 +28,7 @@ export async function getQuestions(page = 1, pageSize = 5) {
           question
           options
           correctAnswer
+          type
           level
           explanation
         }
@@ -56,6 +58,7 @@ export async function getQuestion(id: number) {
         question
         options
         correctAnswer
+        type
         level
         explanation
       }
@@ -79,6 +82,7 @@ export async function createQuestion(input: Omit<Question, "id">) {
         question
         options
         correctAnswer
+        type
         level
         explanation
       }
@@ -102,6 +106,7 @@ export async function updateQuestion(input: Question) {
         question
         options
         correctAnswer
+        type
         level
         explanation
       }
@@ -144,6 +149,7 @@ export async function getRandomQuestion(level: string, count: number) {
         question
         options
         correctAnswer
+        type
         level
         explanation
       }
