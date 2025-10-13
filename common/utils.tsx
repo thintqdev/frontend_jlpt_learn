@@ -1,5 +1,9 @@
 import React from "react";
 
+export function renderJapaneseText(text: string): React.ReactNode {
+  return parseFurigana(text);
+}
+
 export function highlightGrammarInSentence(sentence: string): React.ReactNode {
   const regex = /\*(.*?)\*|_(.*?)_/g;
   const parts: React.ReactNode[] = [];
@@ -12,13 +16,13 @@ export function highlightGrammarInSentence(sentence: string): React.ReactNode {
     }
     if (match[1] !== undefined) {
       parts.push(
-        <span key={key++} className="font-bold text-red-600">
+        <span key={key++} className="font-bold text-red-600 break-words">
           {match[1]}
         </span>
       );
     } else if (match[2] !== undefined) {
       parts.push(
-        <span key={key++} className="underline">
+        <span key={key++} className="underline break-words">
           {match[2]}
         </span>
       );

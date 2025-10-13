@@ -148,7 +148,7 @@ export default function KaiwaDetailPage() {
     return (
       <AppLayout>
         <div className="min-h-screen flex flex-col items-center justify-center">
-          <div className="animate-spin h-10 w-10 rounded-full border-b-2 border-primary-500 mb-4"></div>
+          <div className="animate-spin h-10 w-10 rounded-full border-b-2 border-rose-500 mb-4"></div>
           <h2 className="text-xl font-bold mb-2">Đang tải hội thoại...</h2>
         </div>
       </AppLayout>
@@ -192,7 +192,7 @@ export default function KaiwaDetailPage() {
           {kaiwa.level}
         </Badge>
       </div>
-      <div className="px-4 sm:px-8 py-6 max-w-2xl mx-auto">
+      <div className="px-4 sm:px-8 py-6 max-w-4xl mx-auto min-h-screen">
         {!practiceMode ? (
           <>
             <motion.div
@@ -212,7 +212,7 @@ export default function KaiwaDetailPage() {
                       onClick={() => setSelectedRole(role)}
                       className={`rounded-full shadow-sm px-5 py-2 text-base ${
                         selectedRole === role
-                          ? "bg-primary-600 hover:bg-primary-700"
+                          ? "bg-rose-600 hover:bg-rose-700"
                           : "border-gray-200 text-gray-600 hover:bg-gray-50"
                       }`}
                     >
@@ -223,7 +223,7 @@ export default function KaiwaDetailPage() {
                 {selectedRole && (
                   <Button
                     onClick={startPractice}
-                    className="bg-gradient-to-r from-primary-500 to-green-600 hover:from-primary-600 hover:to-green-700 text-white px-6 py-2 text-base shadow rounded-full"
+                    className="bg-rose-600 hover:bg-rose-700 text-white px-6 py-2 text-base shadow rounded-full"
                   >
                     <Play className="w-4 h-4 mr-2" />
                     Bắt đầu luyện tập
@@ -239,7 +239,7 @@ export default function KaiwaDetailPage() {
               <div className="mb-4 font-semibold text-lg text-gray-900">
                 Toàn bộ hội thoại:
               </div>
-              <div className="space-y-3">
+              <div className="p-4  space-y-4">
                 <AnimatePresence>
                   {kaiwa.conversation.map((line: KaiwaLine, idx: number) => {
                     const isRight = line.speaker !== roles[0];
@@ -253,71 +253,110 @@ export default function KaiwaDetailPage() {
                         variants={bubbleVariants}
                         className={`flex ${
                           isRight ? "justify-end" : "justify-start"
-                        } flex-col items-stretch`}
+                        } mb-3`}
                       >
-                        <motion.div
-                          layout
-                          className={`max-w-[95%] rounded-2xl px-6 py-4 mb-1 shadow-lg transition-all duration-200 border-2 
-                            bg-gradient-to-tr ${
-                              speakerColors[line.speaker] ||
-                              "from-gray-100 to-gray-50"
-                            }`}
+                        <div
+                          className={`flex items-start space-x-2 max-w-[80%] ${
+                            isRight ? "flex-row-reverse space-x-reverse" : ""
+                          }`}
                         >
-                          <div className="flex items-center mb-1 gap-2">
-                            <Badge
-                              className={`text-xs px-2 py-1 font-medium rounded-full shadow-sm ${
-                                isRight
-                                  ? "bg-pink-200 text-pink-800"
-                                  : "bg-indigo-200 text-indigo-800"
-                              }`}
-                            >
-                              {line.speaker}
-                            </Badge>
-                            <span className="japanese-text text-lg font-bold tracking-wide">
-                              {line.jp}
-                            </span>
-                            <button
-                              className="ml-2 p-2 rounded-full hover:bg-gray-200 transition"
-                              title="Nghe tiếng Nhật"
-                              type="button"
-                              onClick={() => speakJapanese(line.jp)}
-                            >
-                              <Volume2 className="w-5 h-5 text-indigo-500" />
-                            </button>
-                          </div>
-                          {line.romaji && (
-                            <div className="text-sm text-gray-600 italic mb-1">
-                              {line.romaji}
-                            </div>
-                          )}
-                          <motion.button
-                            whileTap={{ scale: 0.95 }}
-                            className={`text-sm underline font-semibold mt-2 ${
-                              isRight ? "text-pink-600" : "text-indigo-600"
+                          {/* Avatar */}
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-bold ${
+                              line.speaker === "A"
+                                ? "bg-blue-500"
+                                : "bg-pink-500"
                             }`}
-                            onClick={() =>
-                              setShowMeanings((prev) => ({
-                                ...prev,
-                                [key]: !prev[key],
-                              }))
-                            }
-                            type="button"
                           >
-                            {showMeanings[key] ? "Ẩn nghĩa" : "Xem nghĩa"}
-                          </motion.button>
-                          <AnimatePresence>
-                            {showMeanings[key] && (
-                              <motion.div
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: 10 }}
-                                className="mt-2 text-sm text-gray-700 bg-white rounded p-2 shadow-inner border border-gray-200"
+                            {line.speaker}
+                          </div>
+
+                          {/* Message bubble */}
+                          <motion.div
+                            layout
+                            className={`px-4 py-3 rounded-2xl shadow-sm relative ${
+                              isRight
+                                ? "bg-blue-500 text-white rounded-br-md"
+                                : "bg-white border border-gray-200 rounded-bl-md"
+                            }`}
+                          >
+                            {/* Message tail */}
+                            <div
+                              className={`absolute top-4 w-3 h-3 transform rotate-45 ${
+                                isRight
+                                  ? "bg-blue-500 -right-1.5"
+                                  : "bg-white border-l border-b border-gray-200 -left-1.5"
+                              }`}
+                            ></div>
+
+                            <div className="relative z-10">
+                              <div className="flex items-center gap-2 mb-1">
+                                <span
+                                  className={`japanese-text text-lg font-medium ${
+                                    isRight ? "text-white" : "text-gray-900"
+                                  }`}
+                                >
+                                  {line.jp}
+                                </span>
+                                <button
+                                  className={`p-1 rounded-full transition ${
+                                    isRight
+                                      ? "hover:bg-blue-400 text-white"
+                                      : "hover:bg-gray-100 text-gray-600"
+                                  }`}
+                                  title="Nghe tiếng Nhật"
+                                  type="button"
+                                  onClick={() => speakJapanese(line.jp)}
+                                >
+                                  <Volume2 className="w-4 h-4" />
+                                </button>
+                              </div>
+
+                              {line.romaji && (
+                                <div
+                                  className={`text-sm italic mb-2 ${
+                                    isRight ? "text-blue-100" : "text-gray-500"
+                                  }`}
+                                >
+                                  {line.romaji}
+                                </div>
+                              )}
+
+                              <motion.button
+                                whileTap={{ scale: 0.95 }}
+                                className={`text-xs underline font-medium ${
+                                  isRight ? "text-blue-100" : "text-blue-600"
+                                }`}
+                                onClick={() =>
+                                  setShowMeanings((prev) => ({
+                                    ...prev,
+                                    [key]: !prev[key],
+                                  }))
+                                }
+                                type="button"
                               >
-                                {line.vi}
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </motion.div>
+                                {showMeanings[key] ? "Ẩn nghĩa" : "Xem nghĩa"}
+                              </motion.button>
+
+                              <AnimatePresence>
+                                {showMeanings[key] && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: 10 }}
+                                    className={`mt-2 text-sm p-2 rounded ${
+                                      isRight
+                                        ? "bg-blue-400 text-white"
+                                        : "bg-gray-100 text-gray-700"
+                                    }`}
+                                  >
+                                    {line.vi}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          </motion.div>
+                        </div>
                       </motion.div>
                     );
                   })}
@@ -336,7 +375,7 @@ export default function KaiwaDetailPage() {
           >
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold text-primary-700">
+                <h2 className="text-lg font-bold text-rose-700">
                   Chế độ luyện tập - Vai {selectedRole}
                 </h2>
                 <p className="text-sm text-gray-600">
@@ -358,115 +397,135 @@ export default function KaiwaDetailPage() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.97, y: -30 }}
               transition={{ duration: 0.25 }}
-              className="bg-white border-2 border-gray-200 rounded-2xl p-6 shadow-lg relative overflow-hidden"
+              className="bg-gray-50 rounded-lg p-6 shadow-lg relative overflow-hidden"
             >
-              {isMyTurn ? (
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0.98, opacity: 0.8 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className="bg-green-50 border border-green-200  p-4 mb-4"
+              {/* Chat container */}
+              <div className="flex justify-center mb-6">
+                <div
+                  className={`flex items-start space-x-3 max-w-md ${
+                    isMyTurn ? "" : "flex-row-reverse space-x-reverse"
+                  }`}
+                >
+                  {/* Avatar */}
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white text-lg font-bold ${
+                      currentLine?.speaker === "A"
+                        ? "bg-blue-500"
+                        : "bg-pink-500"
+                    }`}
                   >
-                    <p className="text-green-700 font-bold mb-2">
-                      🎯 Lượt của bạn!
-                    </p>
-                    <p className="text-sm text-green-600">Hãy nói câu này:</p>
-                  </motion.div>
-                  <motion.div
-                    initial={{ scale: 0.98, opacity: 0.8 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.15 }}
-                    className="bg-primary-50  p-4 shadow"
+                    {currentLine?.speaker}
+                  </div>
+
+                  {/* Message bubble */}
+                  <div
+                    className={`px-6 py-4 rounded-2xl shadow-md relative max-w-xs ${
+                      isMyTurn
+                        ? "bg-green-500 text-white rounded-bl-md"
+                        : "bg-white border-2 border-gray-200 rounded-br-md"
+                    }`}
                   >
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <span className="japanese-text text-2xl font-bold tracking-wider">
-                        {currentLine.jp}
-                      </span>
-                      <button
-                        className="p-2 rounded-full hover:bg-primary-100"
-                        title="Nghe mẫu"
-                        type="button"
-                        onClick={() => speakJapanese(currentLine.jp)}
-                      >
-                        <Volume2 className="w-5 h-5 text-primary-500" />
-                      </button>
-                    </div>
-                    {currentLine.romaji && (
-                      <div className="text-base text-gray-500 mb-2 italic">
-                        {currentLine.romaji}
-                      </div>
-                    )}
-                    <motion.button
-                      whileTap={{ scale: 0.95 }}
-                      className="text-base text-primary-600 underline font-semibold"
-                      onClick={() =>
-                        setShowMeanings((prev) => ({
-                          ...prev,
-                          ["practice-" + currentStep]:
-                            !prev["practice-" + currentStep],
-                        }))
-                      }
-                      type="button"
+                    {/* Message tail */}
+                    <div
+                      className={`absolute top-5 w-4 h-4 transform rotate-45 ${
+                        isMyTurn
+                          ? "bg-green-500 -left-2"
+                          : "bg-white border-l border-b border-gray-200 -right-2"
+                      }`}
+                    ></div>
+
+                    {/* Status indicator */}
+                    <div
+                      className={`text-xs font-semibold mb-2 ${
+                        isMyTurn ? "text-green-100" : "text-gray-500"
+                      }`}
                     >
-                      {showMeanings["practice-" + currentStep]
-                        ? "Ẩn nghĩa"
-                        : "Hiện nghĩa"}
-                    </motion.button>
-                    <AnimatePresence>
-                      {showMeanings["practice-" + currentStep] && (
-                        <motion.div
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          exit={{ opacity: 0, y: 10 }}
-                          className="text-base text-gray-700 mt-2 pt-2 border-t border-primary-200 bg-white rounded shadow-inner"
+                      {isMyTurn
+                        ? "🎯 Lượt của bạn!"
+                        : `👥 Vai ${currentLine?.speaker} nói:`}
+                    </div>
+
+                    <div className="relative z-10">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span
+                          className={`japanese-text text-xl font-bold ${
+                            isMyTurn ? "text-white" : "text-gray-900"
+                          }`}
                         >
-                          {currentLine.vi}
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </motion.div>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <motion.div
-                    initial={{ scale: 0.98, opacity: 0.8 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className="bg-blue-50 border border-blue-200  p-4 mb-4"
-                  >
-                    <p className="text-blue-700 font-bold mb-2">
-                      👥 Vai {currentLine?.speaker} nói:
-                    </p>
-                  </motion.div>
-                  <motion.div
-                    initial={{ scale: 0.98, opacity: 0.8 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ duration: 0.4, delay: 0.15 }}
-                    className="bg-blue-50  p-4 shadow"
-                  >
-                    <div className="flex items-center justify-center space-x-2 mb-2">
-                      <span className="japanese-text text-2xl font-bold tracking-wider">
-                        {currentLine?.jp}
-                      </span>
-                      <button
-                        className="p-2 rounded-full hover:bg-blue-100"
-                        title="Phát âm"
-                        type="button"
-                        onClick={() => speakJapanese(currentLine?.jp || "")}
-                      >
-                        <Volume2 className="w-5 h-5 text-blue-500" />
-                      </button>
-                    </div>
-                    {currentLine?.romaji && (
-                      <div className="text-base text-gray-500 mb-2 italic">
-                        {currentLine?.romaji}
+                          {currentLine?.jp}
+                        </span>
+                        <button
+                          className={`p-1.5 rounded-full transition ${
+                            isMyTurn
+                              ? "hover:bg-green-400 text-white"
+                              : "hover:bg-gray-100 text-gray-600"
+                          }`}
+                          title={isMyTurn ? "Nghe mẫu" : "Phát âm"}
+                          type="button"
+                          onClick={() => speakJapanese(currentLine?.jp || "")}
+                        >
+                          <Volume2 className="w-5 h-5" />
+                        </button>
                       </div>
-                    )}
-                    <div className="text-base text-gray-700 mt-2 pt-2 border-t border-blue-200 bg-white rounded shadow-inner">
-                      {currentLine?.vi}
+
+                      {currentLine?.romaji && (
+                        <div
+                          className={`text-sm italic mb-2 ${
+                            isMyTurn ? "text-green-100" : "text-gray-500"
+                          }`}
+                        >
+                          {currentLine?.romaji}
+                        </div>
+                      )}
+
+                      {isMyTurn ? (
+                        <motion.button
+                          whileTap={{ scale: 0.95 }}
+                          className="text-sm text-green-100 underline font-medium"
+                          onClick={() =>
+                            setShowMeanings((prev) => ({
+                              ...prev,
+                              ["practice-" + currentStep]:
+                                !prev["practice-" + currentStep],
+                            }))
+                          }
+                          type="button"
+                        >
+                          {showMeanings["practice-" + currentStep]
+                            ? "Ẩn nghĩa"
+                            : "Hiện nghĩa"}
+                        </motion.button>
+                      ) : (
+                        <div className="text-sm text-gray-700 mt-2 pt-2 border-t border-gray-200">
+                          {currentLine?.vi}
+                        </div>
+                      )}
+
+                      {isMyTurn && (
+                        <AnimatePresence>
+                          {showMeanings["practice-" + currentStep] && (
+                            <motion.div
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: 10 }}
+                              className="mt-2 text-sm p-2 rounded bg-green-400 text-white"
+                            >
+                              {currentLine?.vi}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      )}
                     </div>
-                  </motion.div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Practice instruction */}
+              {isMyTurn && (
+                <div className="text-center bg-white rounded-lg p-3 border border-green-200">
+                  <p className="text-sm text-green-700">
+                    💬 Hãy thực hành nói câu này theo giọng tiếng Nhật tự nhiên
+                  </p>
                 </div>
               )}
             </motion.div>
@@ -500,7 +559,7 @@ export default function KaiwaDetailPage() {
                     key={idx}
                     layout
                     className={`h-2 flex-1 rounded-full transition-all duration-200 ${
-                      idx <= currentStep ? "bg-primary-500" : "bg-gray-200"
+                      idx <= currentStep ? "bg-rose-500" : "bg-gray-200"
                     }`}
                   />
                 ))}

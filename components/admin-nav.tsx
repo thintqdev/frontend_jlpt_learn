@@ -5,8 +5,8 @@ import {
   FileText,
   BookOpen,
   MessageSquare,
-  LayoutDashboard,
   FileTextIcon,
+  Library,
 } from "lucide-react";
 
 const navItems = [
@@ -24,6 +24,11 @@ const navItems = [
     href: "/admin/vocabulary",
     label: "Vocabulary",
     icon: BookOpen,
+  },
+  {
+    href: "/admin/dictionary",
+    label: "Dictionary",
+    icon: Library,
   },
   {
     href: "/admin/reading",

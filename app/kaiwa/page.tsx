@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,10 @@ import {
   Play,
 } from "lucide-react";
 import AppLayout from "@/components/app-layout";
+import PageHeader from "@/components/page-header";
 import { fetchConversations, Conversation } from "@/lib/conversation";
+
+const SmartPagination = lazy(() => import("@/components/smart-pagination"));
 
 // Định nghĩa type cho hội thoại
 interface KaiwaLine {
@@ -226,148 +229,114 @@ export default function KaiwaDailyPage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen">
-        <div className="px-4 sm:px-6 pt-10 pb-6 border-b border-gray-100">
-          <div className="flex justify-between items-center mb-4">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Kaiwa hằng ngày
-            </h1>
-            <Badge variant="secondary" className="bg-rose-100 text-rose-700">
-              {filteredKaiwa.length} đoạn hội thoại
-            </Badge>
-          </div>
+      <PageHeader
+        title="Kaiwa hằng ngày"
+        badge={{
+          text: `${filteredKaiwa.length} đoạn hội thoại`,
+          className: "bg-rose-100 text-rose-700",
+        }}
+        search={{
+          placeholder: "Tìm kiếm theo tiêu đề, chủ đề hoặc nội dung...",
+          value: search,
+          onChange: (value) => handleFilterChange(() => setSearch(value))(),
+        }}
+        levelFilters={{
+          levels: levels,
+          selectedLevel: selectedLevel,
+          onLevelChange: (level) =>
+            handleFilterChange(() => setSelectedLevel(level))(),
+        }}
+      />
 
-          <div className="mb-4">
-            <input
-              className="w-full border border-gray-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-rose-200 focus:border-rose-400"
-              placeholder="Tìm kiếm theo tiêu đề, chủ đề hoặc nội dung..."
-              value={search}
-              onChange={handleFilterChange((e: any) =>
-                setSearch(e.target.value)
-              )}
-            />
+      <div className="px-4 sm:px-6 py-6">
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-3">🔄</div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+              Đang tải hội thoại...
+            </h3>
           </div>
-
-          <div className="flex space-x-2 overflow-x-auto pb-2 snap-x snap-mandatory">
-            {levels.map((level) => (
-              <Button
-                key={level}
-                variant={selectedLevel === level ? "default" : "outline"}
-                size="sm"
-                onClick={handleFilterChange(() => setSelectedLevel(level))}
-                className={`snap-start whitespace-nowrap ${
-                  selectedLevel === level
-                    ? "bg-rose-600 hover:bg-rose-700"
-                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                }`}
+        ) : pagedKaiwa.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-5xl mb-3">🔍</div>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
+              Không có hội thoại nào
+            </h3>
+            <p className="text-gray-600">
+              Thử chọn trình độ khác hoặc từ khóa khác
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {pagedKaiwa.map((kaiwa) => (
+              <Card
+                key={kaiwa.id}
+                className="border hover:border-rose-300 hover:shadow transition-all duration-200  group"
+                onClick={() => setSelectedKaiwa(kaiwa)}
               >
-                {level}
-              </Button>
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <h3 className="text-base font-semibold text-gray-900 group-hover:text-rose-600">
+                        {kaiwa.title}
+                      </h3>
+                      <p className="text-sm text-gray-600">{kaiwa.category}</p>
+                    </div>
+                    <Badge className="mt-1">{kaiwa.level}</Badge>
+                  </div>
+                  <div className="text-sm text-gray-500 flex flex-wrap justify-between items-center">
+                    <div className="flex space-x-3 mb-2">
+                      <div className="flex items-center">
+                        <MessageCircle className="w-4 h-4 mr-1" />
+                        {kaiwa.conversation.length} câu
+                      </div>
+                      <div className="flex items-center">
+                        <Clock className="w-4 h-4 mr-1" />
+                        {kaiwa.duration}
+                      </div>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-1 sm:space-y-0">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          window.location.href = `/kaiwa/${kaiwa.id}`;
+                        }}
+                        className="text-green-600 border-green-300 hover:bg-green-50"
+                      >
+                        <Play className="w-3 h-3 mr-1" />
+                        Luyện tập
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm text-gray-700 japanese-text">
+                      {kaiwa.conversation[0]?.jp}
+                    </div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      {kaiwa.conversation[0]?.vi}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
-        </div>
+        )}
 
-        <div className="px-4 sm:px-6 py-6">
-          {loading ? (
-            <div className="text-center py-12">
-              <div className="text-5xl mb-3">🔄</div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-                Đang tải hội thoại...
-              </h3>
-            </div>
-          ) : pagedKaiwa.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-5xl mb-3">🔍</div>
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1">
-                Không có hội thoại nào
-              </h3>
-              <p className="text-gray-600">
-                Thử chọn trình độ khác hoặc từ khóa khác
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-4">
-              {pagedKaiwa.map((kaiwa) => (
-                <Card
-                  key={kaiwa.id}
-                  className="border hover:border-rose-300 hover:shadow transition-all duration-200  group"
-                  onClick={() => setSelectedKaiwa(kaiwa)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex justify-between items-start mb-2">
-                      <div>
-                        <h3 className="text-base font-semibold text-gray-900 group-hover:text-rose-600">
-                          {kaiwa.title}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {kaiwa.category}
-                        </p>
-                      </div>
-                      <Badge className="mt-1">{kaiwa.level}</Badge>
-                    </div>
-                    <div className="text-sm text-gray-500 flex flex-wrap justify-between items-center">
-                      <div className="flex space-x-3 mb-2">
-                        <div className="flex items-center">
-                          <MessageCircle className="w-4 h-4 mr-1" />
-                          {kaiwa.conversation.length} câu
-                        </div>
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          {kaiwa.duration}
-                        </div>
-                      </div>
-                      <div className="flex flex-col sm:flex-row sm:space-x-2 space-y-1 sm:space-y-0">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            window.location.href = `/kaiwa/${kaiwa.id}`;
-                          }}
-                          className="text-green-600 border-green-300 hover:bg-green-50"
-                        >
-                          <Play className="w-3 h-3 mr-1" />
-                          Luyện tập
-                        </Button>
-                      </div>
-                    </div>
-                    <div className="mt-3 p-3 bg-gray-50 rounded-lg">
-                      <div className="text-sm text-gray-700 japanese-text">
-                        {kaiwa.conversation[0]?.jp}
-                      </div>
-                      <div className="text-xs text-gray-500 mt-1">
-                        {kaiwa.conversation[0]?.vi}
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-
-          {filteredKaiwa.length > pageSize && (
-            <div className="flex justify-center items-center mt-8 space-x-2">
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page === 1}
-                onClick={() => setPage(page - 1)}
-              >
-                Trước
-              </Button>
-              <span className="text-sm text-gray-600 px-4">
-                Trang {page}/{totalPage}
-              </span>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={page === totalPage}
-                onClick={() => setPage(page + 1)}
-              >
-                Sau
-              </Button>
-            </div>
-          )}
+        <div className="flex justify-center mt-8">
+          <Suspense
+            fallback={
+              <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+            }
+          >
+            <SmartPagination
+              currentPage={page}
+              totalPages={totalPage}
+              onPageChange={setPage}
+              disabled={loading}
+            />
+          </Suspense>
         </div>
       </div>
     </AppLayout>

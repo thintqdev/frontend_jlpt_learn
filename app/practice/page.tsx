@@ -15,6 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AppLayout from "@/components/app-layout";
+import SmartPagination from "@/components/smart-pagination";
+import PageHeader from "@/components/page-header";
 
 const practiceGames = [
   {
@@ -72,17 +74,11 @@ const practiceGames = [
 export default function PracticePage() {
   return (
     <AppLayout>
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary-500 to-primary-700 text-white px-6 pt-12 pb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Luyện tập 🎮</h1>
-            <p className="text-primary-100">
-              Chọn trò chơi yêu thích để luyện từ vựng
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Luyện tập 🎮"
+        subtitle="Chọn trò chơi yêu thích để luyện từ vựng"
+        variant="gradient"
+      />
 
       {/* Practice Games */}
       <div className="px-6 mb-8">
@@ -99,13 +95,13 @@ export default function PracticePage() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
                       <div
-                        className={`w-14 h-14 bg-gradient-to-br ${game.color} rounded-2xl flex items-center justify-center shadow-lg`}
+                        className={`flex-shrink-0 w-14 h-14 bg-gradient-to-br ${game.color} rounded-2xl flex items-center justify-center shadow-lg`}
                       >
                         <Icon className="h-7 w-7 text-white" />
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <h4 className="text-lg font-bold text-gray-900 mb-1">
                           {game.title}
                         </h4>

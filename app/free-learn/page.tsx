@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import AppLayout from "@/components/app-layout";
+import SmartPagination from "@/components/smart-pagination";
+import PageHeader from "@/components/page-header";
 import { JLPTApi, type JLPTWord } from "@/lib/jlpt-api";
 
 const learningModes = [
@@ -134,51 +136,16 @@ export default function FreeLearnPage() {
 
   return (
     <AppLayout>
-      {/* Header */}
-      <div className="bg-gradient-to-br from-primary-500 to-primary-700 text-white px-6 pt-12 pb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-2xl font-bold mb-1">Free Learn 🆓</h1>
-            <p className="text-primary-100">
-              Học từ vựng JLPT miễn phí với API
-            </p>
-          </div>
-          <div className="text-right">
-            <div className="text-2xl font-bold mb-1">∞</div>
-            <div className="text-xs text-primary-100">Từ vựng</div>
-          </div>
-        </div>
-
-        {/* Streak & API Info */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <Card className="bg-white/10 backdrop-blur-sm border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-orange-500 rounded-full flex items-center justify-center">
-                  <Flame className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white">{streak} ngày</h3>
-                  <p className="text-xs text-primary-100">Streak học tập</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          <Card className="bg-white/10 backdrop-blur-sm border-0">
-            <CardContent className="p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
-                  <Zap className="h-5 w-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-white">Live API</h3>
-                  <p className="text-xs text-primary-100">JLPT Official</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+      <PageHeader
+        title="Free Learn 🆓"
+        subtitle="Học từ vựng JLPT miễn phí với API"
+        variant="gradient"
+        stats={[
+          { value: "∞", label: "Từ vựng" },
+          { value: `${streak} ngày`, label: "Streak học tập" },
+          { value: "Live API", label: "JLPT Official" },
+        ]}
+      />
 
       {/* Word of the Day */}
       {wordOfTheDay && (

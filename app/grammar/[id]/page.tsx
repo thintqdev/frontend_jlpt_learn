@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/app-layout";
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import { ArrowLeft, BookOpen, Target } from "lucide-react";
 import { renderExample } from "@/common/utils";
 
 // Màu cấp độ pastel, badge nhỏ
@@ -90,7 +90,7 @@ export default function GrammarDetailPage() {
         />
 
         {/* Nội dung trang */}
-        <div className="relative z-10 w-full max-w-2xl mx-auto py-8 px-4 sm:px-6">
+        <div className="relative z-10 w-full max-w-6xl mx-auto py-8 px-4 sm:px-6">
           {/* Nút quay lại */}
           <div className="mb-8">
             <Link href="/grammar">
@@ -122,10 +122,20 @@ export default function GrammarDetailPage() {
               {grammar.definition}
             </div>
             {grammar.description && (
-              <div className="text-gray-600 text-base">
+              <div className="text-gray-600 text-base mb-4">
                 {grammar.description}
               </div>
             )}
+
+            {/* Practice Button */}
+            <div className="mt-6">
+              <Link href={`/grammar/${id}/practice`}>
+                <Button className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-semibold px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-200">
+                  <Target className="mr-2 h-5 w-5" />
+                  Luyện tập ngữ pháp
+                </Button>
+              </Link>
+            </div>
           </div>
 
           {/* Usage list */}

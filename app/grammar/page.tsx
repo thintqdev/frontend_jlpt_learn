@@ -1,21 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import Link from "next/link";
-import {
-  Search,
-  Filter,
-  BookOpen,
-  X,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Search, Filter, BookOpen, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import AppLayout from "@/components/app-layout";
+import PageHeader from "@/components/page-header";
 import { getGrammars } from "@/lib/grammar";
+
+const SmartPagination = lazy(() => import("@/components/smart-pagination"));
 
 const LEVELS = ["Tất cả", "N5", "N4", "N3", "N2", "N1"];
 const SORT_OPTIONS = [
@@ -105,123 +101,88 @@ export default function GrammarListPage() {
 
   return (
     <AppLayout>
-      {/* Header */}
-      <div className="px-6 pt-12 pb-6 border-b border-gray-100">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-2xl font-bold text-gray-900">Ngữ pháp</h1>
-          <div className="flex items-center space-x-2">
-            <Badge
-              variant="secondary"
-              className="bg-primary-100 text-primary-700"
-            >
-              {totalCount} mẫu ngữ pháp
-            </Badge>
-            {hasActiveFilters && (
-              <Button
-                onClick={clearFilters}
-                variant="ghost"
-                size="sm"
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-4 w-4 mr-1" />
-                Xóa bộ lọc
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="flex space-x-3 mb-4">
-          <div className="flex-1 relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              placeholder="Tìm kiếm ngữ pháp, định nghĩa..."
-              className="pl-10 border-gray-200 focus:border-primary-300"
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            className="border-gray-200"
-            onClick={() => setShowFilters(!showFilters)}
-          >
-            <Filter className="h-4 w-4" />
-          </Button>
-        </div>
-
-        {/* Filters */}
-        {showFilters && (
-          <div className="space-y-4 p-4 bg-gray-50 rounded-lg mb-4">
-            {/* Level Filter */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Trình độ
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {LEVELS.map((level) => (
-                  <Button
-                    key={level}
-                    variant={selectedLevel === level ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleLevelChange(level)}
-                    className={
-                      selectedLevel === level
-                        ? "bg-primary-600 hover:bg-primary-700"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }
-                  >
-                    {level}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            {/* Sort Options */}
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">
-                Sắp xếp theo
-              </label>
-              <div className="flex flex-wrap gap-2">
-                {SORT_OPTIONS.map((option) => (
-                  <Button
-                    key={option.value}
-                    variant={sortBy === option.value ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => handleSortChange(option.value)}
-                    className={
-                      sortBy === option.value
-                        ? "bg-primary-600 hover:bg-primary-700"
-                        : "border-gray-200 text-gray-600 hover:bg-gray-50"
-                    }
-                  >
-                    {option.label}
-                  </Button>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Quick Level Filter (always visible) */}
-        <div className="flex space-x-2 overflow-x-auto pb-2">
-          {LEVELS.map((level) => (
+      <PageHeader
+        title="Ngữ pháp"
+        badge={{
+          text: `${totalCount} mẫu ngữ pháp`,
+          className: "bg-primary-100 text-primary-700",
+        }}
+        search={{
+          placeholder: "Tìm kiếm ngữ pháp, định nghĩa...",
+          value: searchQuery,
+          onChange: (value) => handleSearchChange({ target: { value } } as any),
+        }}
+        levelFilters={{
+          levels: LEVELS,
+          selectedLevel: selectedLevel,
+          onLevelChange: handleLevelChange,
+        }}
+        actions={
+          hasActiveFilters && (
             <Button
-              key={level}
-              variant={selectedLevel === level ? "default" : "outline"}
+              onClick={clearFilters}
+              variant="ghost"
               size="sm"
-              onClick={() => handleLevelChange(level)}
-              className={
-                selectedLevel === level
-                  ? "bg-primary-600 hover:bg-primary-700 whitespace-nowrap"
-                  : "border-gray-200 text-gray-600 hover:bg-gray-50 whitespace-nowrap"
-              }
+              className="text-gray-500 hover:text-gray-700"
             >
-              {level}
+              <X className="h-4 w-4 mr-1" />
+              Xóa bộ lọc
             </Button>
-          ))}
-        </div>
-      </div>
+          )
+        }
+        filters={
+          showFilters && (
+            <div className="space-y-4 p-4 bg-gray-50 rounded-lg mb-4">
+              {/* Level Filter */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Trình độ
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {LEVELS.map((level) => (
+                    <Button
+                      key={level}
+                      variant={selectedLevel === level ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleLevelChange(level)}
+                      className={
+                        selectedLevel === level
+                          ? "bg-primary-600 hover:bg-primary-700"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }
+                    >
+                      {level}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+              {/* Sort Options */}
+              <div>
+                <label className="text-sm font-medium text-gray-700 mb-2 block">
+                  Sắp xếp theo
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {SORT_OPTIONS.map((option) => (
+                    <Button
+                      key={option.value}
+                      variant={sortBy === option.value ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handleSortChange(option.value)}
+                      className={
+                        sortBy === option.value
+                          ? "bg-primary-600 hover:bg-primary-700"
+                          : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )
+        }
+      />
 
       {/* Results Summary */}
       {(searchQuery || selectedLevel !== "Tất cả") && (
@@ -263,7 +224,7 @@ export default function GrammarListPage() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {grammars.map((grammar: any, index) => (
               <Card
                 key={grammar.id}
@@ -271,13 +232,13 @@ export default function GrammarListPage() {
               >
                 <CardContent className="p-5">
                   <div className="flex items-start justify-between mb-4">
-                    <div className="flex items-center space-x-4">
-                      <div className="w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg">
+                    <div className="flex items-center space-x-4 flex-1 min-w-0">
+                      <div className="flex-shrink-0 w-16 h-16 bg-gradient-to-br from-primary-400 to-primary-600 rounded-2xl flex items-center justify-center shadow-lg">
                         <span className="text-white text-2xl font-bold">
                           {(page - 1) * pageSize + index + 1}
                         </span>
                       </div>
-                      <div>
+                      <div className="min-w-0 flex-1">
                         <div className="flex items-center space-x-2 mb-1">
                           <h3 className="text-lg font-bold text-gray-900">
                             {grammar.title}
@@ -327,29 +288,20 @@ export default function GrammarListPage() {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center items-center space-x-2 mb-8">
-          <Button
-            onClick={() => setPage(page - 1)}
-            disabled={page <= 1}
-            variant="outline"
-            size="icon"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <span>
-            Trang <strong>{page}</strong> / {totalPages}
-          </span>
-          <Button
-            onClick={() => setPage(page + 1)}
-            disabled={page >= totalPages}
-            variant="outline"
-            size="icon"
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      )}
+      <div className="flex justify-center mb-8">
+        <Suspense
+          fallback={
+            <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+          }
+        >
+          <SmartPagination
+            currentPage={page}
+            totalPages={totalPages}
+            onPageChange={setPage}
+            disabled={loading}
+          />
+        </Suspense>
+      </div>
     </AppLayout>
   );
 }

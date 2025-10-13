@@ -41,22 +41,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
   Plus,
   Upload,
   MoreVertical,
   Edit,
   Trash2,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   getQuestions,
   getQuestion,
@@ -68,6 +62,7 @@ import {
 } from "@/lib/exercise";
 import { highlightGrammarInSentence } from "@/common/utils";
 import AdminNav from "@/components/admin-nav";
+import SmartPagination from "@/components/smart-pagination";
 
 const emptyQuestion: Omit<Question, "id"> = {
   question: "",
@@ -88,7 +83,10 @@ export default function QuestionAdminPage() {
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [questionFormData, setQuestionFormData] = useState(emptyQuestion);
   const [searchTerm, setSearchTerm] = useState("");
-  const [levelFilter, setLevelFilter] = useState("all");
+  const [levelFilter, setLevelFilter] = useState<string[]>([]);
+  const [typeFilter, setTypeFilter] = useState<string[]>([]);
+  const [levelDropdownOpen, setLevelDropdownOpen] = useState(false);
+  const [typeDropdownOpen, setTypeDropdownOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
@@ -121,10 +119,10 @@ export default function QuestionAdminPage() {
       KANJI_SELECTION: "Kanji",
       HIRAGANA: "Hiragana",
       VOCABULARY: "Từ vựng",
-      SYNONYMS_ANTONYMS: "Đồng/Trái nghĩa",
+      SYNONYMS_ANTONYMS: "Đồng nghĩa",
       CONTEXTUAL_WORDS: "Ngữ cảnh",
       GRAMMAR: "Ngữ pháp",
-      JLPT_FORMAT: "JLPT (*)",
+      JLPT_FORMAT: "(*)",
     };
     return labels[type as keyof typeof labels] || type;
   };
@@ -132,23 +130,17 @@ export default function QuestionAdminPage() {
   const fetchQuestions = async () => {
     setLoading(true);
     try {
-      const res = await getQuestions(currentPage, ITEMS_PER_PAGE);
-      let filtered = res.data;
-      // Filter by level (client-side, unless backend supports it)
-      if (levelFilter !== "all") {
-        filtered = filtered.filter((q: Question) => q.level === levelFilter);
-      }
-      // Search (client-side)
-      if (searchTerm.trim()) {
-        filtered = filtered.filter((q: Question) =>
-          q.question.toLowerCase().includes(searchTerm.toLowerCase())
-        );
-      }
-      setQuestions(filtered);
-      setTotal(
-        // Nếu có filter/search thì total là số lượng sau filter, còn không thì lấy từ API
-        levelFilter !== "all" || searchTerm.trim() ? filtered.length : res.total
+      const res = await getQuestions(
+        currentPage,
+        ITEMS_PER_PAGE,
+        searchTerm,
+        undefined,
+        "asc",
+        levelFilter.length > 0 ? levelFilter : undefined,
+        typeFilter.length > 0 ? typeFilter : undefined
       );
+      setQuestions(res.data);
+      setTotal(res.total);
     } catch (err) {
       alert("Lỗi khi tải danh sách câu hỏi");
     } finally {
@@ -159,11 +151,11 @@ export default function QuestionAdminPage() {
   useEffect(() => {
     fetchQuestions();
     // eslint-disable-next-line
-  }, [currentPage, levelFilter, searchTerm]);
+  }, [currentPage, levelFilter, typeFilter, searchTerm]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [levelFilter, searchTerm]);
+  }, [levelFilter, typeFilter, searchTerm]);
 
   const totalPages = Math.ceil(total / ITEMS_PER_PAGE) || 1;
 
@@ -456,23 +448,92 @@ export default function QuestionAdminPage() {
                 className="max-w-sm"
                 disabled={loading}
               />
-              <Select
-                value={levelFilter}
-                onValueChange={setLevelFilter}
-                disabled={loading}
+              <DropdownMenu
+                open={levelDropdownOpen}
+                onOpenChange={setLevelDropdownOpen}
               >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Lọc theo trình độ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trình độ</SelectItem>
-                  <SelectItem value="N5">N5</SelectItem>
-                  <SelectItem value="N4">N4</SelectItem>
-                  <SelectItem value="N3">N3</SelectItem>
-                  <SelectItem value="N2">N2</SelectItem>
-                  <SelectItem value="N1">N1</SelectItem>
-                </SelectContent>
-              </Select>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-[180px] justify-between"
+                    disabled={loading}
+                  >
+                    {levelFilter.length > 0
+                      ? `${levelFilter.length} selected`
+                      : "Lọc theo trình độ"}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {["N5", "N4", "N3", "N2", "N1"].map((level) => (
+                    <DropdownMenuItem
+                      key={level}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Checkbox
+                        checked={levelFilter.includes(level)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setLevelFilter([...levelFilter, level]);
+                          } else {
+                            setLevelFilter(
+                              levelFilter.filter((l) => l !== level)
+                            );
+                          }
+                        }}
+                      />
+                      <span className="ml-2">{level}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <DropdownMenu
+                open={typeDropdownOpen}
+                onOpenChange={setTypeDropdownOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-[180px] justify-between"
+                    disabled={loading}
+                  >
+                    {typeFilter.length > 0
+                      ? `${typeFilter.length} selected`
+                      : "Lọc theo loại"}
+                    <ChevronDown className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56">
+                  {[
+                    { value: "KANJI_SELECTION", label: "Kanji" },
+                    { value: "HIRAGANA", label: "Hiragana" },
+                    { value: "VOCABULARY", label: "Từ vựng" },
+                    { value: "SYNONYMS_ANTONYMS", label: "Đồng/trái nghĩa" },
+                    { value: "CONTEXTUAL_WORDS", label: "Ngữ cảnh" },
+                    { value: "GRAMMAR", label: "Ngữ pháp" },
+                    { value: "JLPT_FORMAT", label: "JLPT (*)" },
+                  ].map((type) => (
+                    <DropdownMenuItem
+                      key={type.value}
+                      onSelect={(e) => e.preventDefault()}
+                    >
+                      <Checkbox
+                        checked={typeFilter.includes(type.value)}
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setTypeFilter([...typeFilter, type.value]);
+                          } else {
+                            setTypeFilter(
+                              typeFilter.filter((t) => t !== type.value)
+                            );
+                          }
+                        }}
+                      />
+                      <span className="ml-2">{type.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </CardHeader>
           <CardContent>
@@ -500,7 +561,11 @@ export default function QuestionAdminPage() {
                       <TableRow key={q.id}>
                         <TableCell className="font-medium">{q.id}</TableCell>
                         <TableCell>
-                          {highlightGrammarInSentence(q.question)}
+                          {q.type !== "VOCABULARY" &&
+                          q.type !== "GRAMMAR" &&
+                          q.type !== "JLPT_FORMAT"
+                            ? highlightGrammarInSentence(q.question)
+                            : q.question}
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
@@ -549,56 +614,12 @@ export default function QuestionAdminPage() {
                   </TableBody>
                 </Table>
                 {totalPages > 1 && (
-                  <div className="pt-6">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage((prev) => Math.max(prev - 1, 1));
-                            }}
-                            className={
-                              currentPage === 1
-                                ? "pointer-events-none opacity-50"
-                                : undefined
-                            }
-                          />
-                        </PaginationItem>
-                        {[...Array(totalPages)].map((_, i) => (
-                          <PaginationItem key={i}>
-                            <PaginationLink
-                              href="#"
-                              isActive={currentPage === i + 1}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCurrentPage(i + 1);
-                              }}
-                            >
-                              {i + 1}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                          <PaginationNext
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage((prev) =>
-                                Math.min(prev + 1, totalPages)
-                              );
-                            }}
-                            className={
-                              currentPage === totalPages
-                                ? "pointer-events-none opacity-50"
-                                : undefined
-                            }
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
+                  <SmartPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    disabled={loading}
+                  />
                 )}
               </>
             )}
@@ -883,32 +904,9 @@ export default function QuestionAdminPage() {
                     Từ phù hợp ngữ cảnh
                   </SelectItem>
                   <SelectItem value="GRAMMAR">Ngữ pháp</SelectItem>
-                  <SelectItem value="JLPT_FORMAT">
-                    Định dạng JLPT (*)
-                  </SelectItem>
+                  <SelectItem value="JLPT_FORMAT">Dấu *</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <h4 className="text-sm font-medium text-blue-800 mb-2">
-                Định dạng câu hỏi:
-              </h4>
-              <div className="text-sm text-blue-700">
-                {aiFormData.type === "KANJI_SELECTION" &&
-                  "Từ kanji được viết bằng chữ kanji thật, đáp án đúng là phiên âm hiragana"}
-                {aiFormData.type === "HIRAGANA" &&
-                  "Chữ hiragana đúng sẽ được gạch ngang _ひらがな_, các đáp án gây nhiễu tốt"}
-                {aiFormData.type === "VOCABULARY" &&
-                  "Chỗ trống dạng _物事_ để điền từ vựng phù hợp"}
-                {aiFormData.type === "GRAMMAR" &&
-                  "Chỗ trống dạng _物事_ để điền cấu trúc ngữ pháp"}
-                {aiFormData.type === "SYNONYMS_ANTONYMS" &&
-                  "Từ được bôi đậm, chọn từ đồng/trái nghĩa phù hợp nhất"}
-                {aiFormData.type === "CONTEXTUAL_WORDS" &&
-                  "Chọn từ phù hợp nhất với ngữ cảnh"}
-                {aiFormData.type === "JLPT_FORMAT" &&
-                  "Định dạng _ _ * _ _ với 4 chỗ trống"}
-              </div>
             </div>
           </div>
 

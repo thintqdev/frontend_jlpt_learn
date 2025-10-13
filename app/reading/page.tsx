@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -29,8 +29,11 @@ import {
   Award,
 } from "lucide-react";
 import AppLayout from "@/components/app-layout";
+import PageHeader from "@/components/page-header";
 import Link from "next/link";
 import { getReadings, searchReadings } from "@/lib/reading";
+
+const SmartPagination = lazy(() => import("@/components/smart-pagination"));
 
 interface ReadingPassage {
   id: number;
@@ -516,85 +519,72 @@ export default function ReadingPage() {
 
   return (
     <AppLayout>
-      {/* Header */}
-      <div className="bg-gradient-to-br from-rose-500 to-rose-700 text-white px-6 py-8 rounded-b-3xl shadow-md">
-        <div className="flex items-center gap-3 mb-4">
-          <BookOpen className="h-8 w-8" />
-          <div>
-            <h1 className="text-2xl font-bold">Bài đọc hiểu JLPT</h1>
-            <p className="text-sm text-rose-100">
-              Luyện tập đọc hiểu theo từng trình độ
-            </p>
-          </div>
-        </div>
-        <div className="grid grid-cols-3 gap-4 text-center text-sm">
-          <div>
-            <div className="text-xl font-bold">{total}</div>
-            <div className="text-rose-100">Bài đọc</div>
-          </div>
-          <div>
-            <div className="text-xl font-bold">
-              {readings.reduce(
-                (sum: number, r: ReadingPassage) =>
-                  sum + r.readingQuestions.length,
-                0
-              )}
-            </div>
-            <div className="text-rose-100">Câu hỏi</div>
-          </div>
-          <div>
-            <div className="text-xl font-bold">N1-N5</div>
-            <div className="text-rose-100">Các cấp độ</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <section className="px-6 mt-6">
-        <Card className="shadow-sm border-none">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Filter className="h-5 w-5 text-gray-600" />
-              <h3 className="font-semibold text-gray-800">Lọc và tìm kiếm</h3>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Tìm kiếm bài đọc..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+      <PageHeader
+        title="Bài đọc hiểu JLPT"
+        subtitle="Luyện tập đọc hiểu theo từng trình độ"
+        icon={<BookOpen className="h-8 w-8" />}
+        variant="gradient"
+        stats={[
+          { value: total, label: "Bài đọc" },
+          {
+            value: readings.reduce(
+              (sum: number, r: ReadingPassage) =>
+                sum + r.readingQuestions.length,
+              0
+            ),
+            label: "Câu hỏi",
+          },
+          { value: "N1-N5", label: "Các cấp độ" },
+        ]}
+        filters={
+          <Card className="shadow-sm border-none">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Filter className="h-5 w-5 text-gray-600" />
+                <h3 className="font-semibold text-gray-800">Lọc và tìm kiếm</h3>
               </div>
-              <Select value={levelFilter} onValueChange={setLevelFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn trình độ" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả trình độ</SelectItem>
-                  <SelectItem value="N5">N5 (Cơ bản)</SelectItem>
-                  <SelectItem value="N4">N4 (Sơ cấp)</SelectItem>
-                  <SelectItem value="N3">N3 (Trung cấp)</SelectItem>
-                  <SelectItem value="N2">N2 (Trung cao)</SelectItem>
-                  <SelectItem value="N1">N1 (Nâng cao)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={textTypeFilter} onValueChange={setTextTypeFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Loại văn bản" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả loại</SelectItem>
-                  <SelectItem value="short">Văn bản ngắn</SelectItem>
-                  <SelectItem value="medium">Văn bản trung</SelectItem>
-                  <SelectItem value="long">Văn bản dài</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input
+                    placeholder="Tìm kiếm bài đọc..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={levelFilter} onValueChange={setLevelFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trình độ" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trình độ</SelectItem>
+                    <SelectItem value="N5">N5 (Cơ bản)</SelectItem>
+                    <SelectItem value="N4">N4 (Sơ cấp)</SelectItem>
+                    <SelectItem value="N3">N3 (Trung cấp)</SelectItem>
+                    <SelectItem value="N2">N2 (Trung cao)</SelectItem>
+                    <SelectItem value="N1">N1 (Nâng cao)</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={textTypeFilter}
+                  onValueChange={setTextTypeFilter}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Loại văn bản" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả loại</SelectItem>
+                    <SelectItem value="short">Văn bản ngắn</SelectItem>
+                    <SelectItem value="medium">Văn bản trung</SelectItem>
+                    <SelectItem value="long">Văn bản dài</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </CardContent>
+          </Card>
+        }
+      />
 
       {/* Reading List */}
       <section className="px-6 mt-6">
@@ -693,43 +683,20 @@ export default function ReadingPage() {
         )}
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex justify-center mt-8">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-              >
-                Trước
-              </Button>
-              <div className="flex items-center gap-1">
-                {[...Array(totalPages)].map((_, i) => (
-                  <Button
-                    key={i}
-                    variant={currentPage === i + 1 ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setCurrentPage(i + 1)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {i + 1}
-                  </Button>
-                ))}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() =>
-                  setCurrentPage((prev) => Math.min(prev + 1, totalPages))
-                }
-                disabled={currentPage === totalPages}
-              >
-                Sau
-              </Button>
-            </div>
-          </div>
-        )}
+        <div className="flex justify-center mt-8">
+          <Suspense
+            fallback={
+              <div className="h-10 w-32 bg-gray-200 rounded animate-pulse"></div>
+            }
+          >
+            <SmartPagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={setCurrentPage}
+              disabled={loading}
+            />
+          </Suspense>
+        </div>
       </section>
 
       <div className="h-20" />

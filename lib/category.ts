@@ -15,6 +15,8 @@ export interface Category {
   slug: string;
 }
 
+import { categoryCache } from "./cache";
+
 export async function createCategory(input: {
   name: string;
   nameJp: string;
@@ -60,8 +62,22 @@ export async function createCategory(input: {
 
 // Lấy danh sách category rút gọn (id, name, nameJp, description)
 export async function fetchShortCategories(): Promise<
-  Array<{ id: string; name: string; nameJp: string; description: string }>
+  Array<{
+    id: string;
+    name: string;
+    nameJp: string;
+    level: string;
+    description: string;
+  }>
 > {
+  const cacheKey = "categories_short";
+
+  // Check cache first
+  const cached = categoryCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const query = `
     query {
       categories {
@@ -70,6 +86,7 @@ export async function fetchShortCategories(): Promise<
           id
           name
           nameJp
+          level
           description
         }
       }
@@ -84,7 +101,10 @@ export async function fetchShortCategories(): Promise<
   if (result.errors) {
     throw new Error(result.errors[0].message);
   }
-  return result.data.categories;
+
+  const data = result.data.categories;
+  categoryCache.set(cacheKey, data.items);
+  return data.items;
 }
 // ... existing code ...
 

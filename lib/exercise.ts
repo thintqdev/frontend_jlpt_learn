@@ -5,7 +5,14 @@ export interface Question {
   question: string;
   options: string[];
   correctAnswer: number;
-  type: "KANJI_SELECTION" | "HIRAGANA" | "VOCABULARY" | "SYNONYMS_ANTONYMS" | "CONTEXTUAL_WORDS" | "GRAMMAR" | "JLPT_FORMAT";
+  type:
+    | "KANJI_SELECTION"
+    | "HIRAGANA"
+    | "VOCABULARY"
+    | "SYNONYMS_ANTONYMS"
+    | "CONTEXTUAL_WORDS"
+    | "GRAMMAR"
+    | "JLPT_FORMAT";
   level: "N1" | "N2" | "N3" | "N4" | "N5";
   explanation?: string;
 }
@@ -19,10 +26,34 @@ export interface QuestionListResponse {
   hasPrevPage: boolean;
 }
 
-export async function getQuestions(page = 1, pageSize = 5) {
+export async function getQuestions(
+  page = 1,
+  pageSize = 5,
+  search?: string,
+  sortBy?: string,
+  sortOrder: "asc" | "desc" = "asc",
+  levelFilter?: string[],
+  typeFilter?: string[]
+) {
   const query = `
-    query GetQuestions($page: Int, $pageSize: Int) {
-      questions(page: $page, pageSize: $pageSize) {
+    query GetQuestions(
+      $page: Int,
+      $pageSize: Int,
+      $search: String,
+      $sortBy: String,
+      $sortOrder: String,
+      $levelFilter: [String!],
+      $typeFilter: [String!]
+    ) {
+      questions(
+        page: $page,
+        pageSize: $pageSize,
+        search: $search,
+        sortBy: $sortBy,
+        sortOrder: $sortOrder,
+        levelFilter: $levelFilter,
+        typeFilter: $typeFilter
+      ) {
         data {
           id
           question
@@ -40,7 +71,15 @@ export async function getQuestions(page = 1, pageSize = 5) {
       }
     }
   `;
-  const variables = { page, pageSize };
+  const variables = {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    levelFilter,
+    typeFilter,
+  };
   const res = await fetch(`${API_URL}/graphql`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -141,10 +180,14 @@ export async function removeQuestion(id: number) {
   return json.data.removeQuestion;
 }
 
-export async function getRandomQuestion(level: string, count: number) {
+export async function getRandomQuestion(
+  level: string,
+  count: number,
+  typeFilter?: string[]
+) {
   const query = `
-    query GetRandomQuestion($level: EnumLevel!, $count: Int!) {
-      getRandomQuestion(level: $level, count: $count) {
+    query GetRandomQuestion($level: EnumLevel!, $count: Int!, $typeFilter: [String!]) {
+      getRandomQuestion(level: $level, count: $count, typeFilter: $typeFilter) {
         id
         question
         options
@@ -155,7 +198,7 @@ export async function getRandomQuestion(level: string, count: number) {
       }
     }
   `;
-  const variables = { level, count };
+  const variables = { level, count, typeFilter };
   const res = await fetch(`${API_URL}/graphql`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

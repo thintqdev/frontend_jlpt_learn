@@ -32,7 +32,7 @@ import {
   getGrammarExamples,
   importGrammarJson,
   importGrammarCsv,
-  removeGrammarUsage, // Thêm import ở đây
+  removeGrammarUsage,
 } from "@/lib/grammar";
 import React from "react";
 import { renderExample } from "../../../common/utils";
@@ -61,7 +61,7 @@ interface GrammarPoint {
   usages: Usage[];
 }
 
-const GRAMMAR_PAGE_SIZE = 5;
+const GRAMMAR_PAGE_SIZE = 10;
 
 export default function GrammarAdminPage() {
   // Phân trang cho danh sách điểm ngữ pháp

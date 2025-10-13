@@ -5,7 +5,9 @@ export async function getGrammars(
   pageSize: number = 10,
   search: string = "",
   sortBy: string = "id",
-  sortOrder: "asc" | "desc" = "asc"
+  sortOrder: "asc" | "desc" = "asc",
+  levelFilter?: string[],
+  typeFilter?: string[]
 ) {
   const query = `
     query Grammars(
@@ -13,14 +15,18 @@ export async function getGrammars(
       $pageSize: Int,
       $search: String,
       $sortBy: String,
-      $sortOrder: String
+      $sortOrder: String,
+      $levelFilter: [String!],
+      $typeFilter: [String!]
     ) {
       grammars(
         page: $page,
         pageSize: $pageSize,
         search: $search,
         sortBy: $sortBy,
-        sortOrder: $sortOrder
+        sortOrder: $sortOrder,
+        levelFilter: $levelFilter,
+        typeFilter: $typeFilter
       ) {
         count
         items {
@@ -45,7 +51,15 @@ export async function getGrammars(
       }
     }
   `;
-  const variables = { page, pageSize, search, sortBy, sortOrder };
+  const variables = {
+    page,
+    pageSize,
+    search,
+    sortBy,
+    sortOrder,
+    levelFilter,
+    typeFilter,
+  };
   const res = await fetch(`${API_URL}/graphql`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -312,10 +326,13 @@ export async function importGrammarCsv(file: File): Promise<boolean> {
   `;
   // Prepare FormData for upload
   const formData = new FormData();
-  formData.append("operations", JSON.stringify({
-    query,
-    variables: { file: null }
-  }));
+  formData.append(
+    "operations",
+    JSON.stringify({
+      query,
+      variables: { file: null },
+    })
+  );
   formData.append("map", JSON.stringify({ "0": ["variables.file"] }));
   formData.append("0", file);
 

@@ -41,14 +41,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
   Plus,
   Upload,
   MoreVertical,
@@ -59,6 +51,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import AdminNav from "@/components/admin-nav";
+import SmartPagination from "@/components/smart-pagination";
 import {
   getReadings,
   createReading,
@@ -816,56 +809,12 @@ export default function ReadingAdminPage() {
                   </TableBody>
                 </Table>
                 {totalPages > 1 && (
-                  <div className="pt-6">
-                    <Pagination>
-                      <PaginationContent>
-                        <PaginationItem>
-                          <PaginationPrevious
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage((prev) => Math.max(prev - 1, 1));
-                            }}
-                            className={
-                              currentPage === 1
-                                ? "pointer-events-none opacity-50"
-                                : undefined
-                            }
-                          />
-                        </PaginationItem>
-                        {[...Array(totalPages)].map((_, i) => (
-                          <PaginationItem key={i}>
-                            <PaginationLink
-                              href="#"
-                              isActive={currentPage === i + 1}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setCurrentPage(i + 1);
-                              }}
-                            >
-                              {i + 1}
-                            </PaginationLink>
-                          </PaginationItem>
-                        ))}
-                        <PaginationItem>
-                          <PaginationNext
-                            href="#"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setCurrentPage((prev) =>
-                                Math.min(prev + 1, totalPages)
-                              );
-                            }}
-                            className={
-                              currentPage === totalPages
-                                ? "pointer-events-none opacity-50"
-                                : undefined
-                            }
-                          />
-                        </PaginationItem>
-                      </PaginationContent>
-                    </Pagination>
-                  </div>
+                  <SmartPagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={setCurrentPage}
+                    disabled={loading}
+                  />
                 )}
               </>
             )}
