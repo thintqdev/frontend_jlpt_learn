@@ -1,1 +1,4 @@
 export const ELEVEN_LAB_API_KEY = process.env.NEXT_PUBLIC_ELEVEN_LABS_API_KEY;
+
+// Re-export admin dictionary constants
+export * from "./admin-dictionary";

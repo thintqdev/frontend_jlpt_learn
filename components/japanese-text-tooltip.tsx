@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -33,27 +34,13 @@ import {
   Sparkles,
   CheckCircle,
 } from "lucide-react";
-import { fetchShortCategories } from "@/lib/category";
 import {
-  createVocabulary,
-  searchVocabulary as searchVocabularyAPI,
-} from "@/lib/vocabulary";
-
-interface VocabularyItem {
-  id?: number;
-  kanji?: string;
-  hiragana: string;
-  definition: string;
-  example?: string;
-  translation?: string;
-  is_learned?: boolean;
-  category?: {
-    id: number;
-    name: string;
-    nameJp: string;
-    level: string;
-  };
-}
+  getDictionaryByDictionaryForm,
+  smartLookup,
+  createDictionary,
+  type Dictionary,
+  type DictionaryMeaning,
+} from "@/lib/dictionary";
 
 interface Category {
   id: number;
@@ -71,9 +58,9 @@ interface TooltipPosition {
 
 interface JapaneseTextTooltipProps {
   children: React.ReactNode;
-  vocabulary?: VocabularyItem[];
+  vocabulary?: Dictionary[];
   categories?: Category[];
-  onAddVocabulary?: (vocab: VocabularyItem) => void;
+  onAddVocabulary?: (vocab: Dictionary) => void;
   className?: string;
 }
 
@@ -87,24 +74,30 @@ export default function JapaneseTextTooltip({
   const [selectedText, setSelectedText] = useState("");
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
-  const [foundVocab, setFoundVocab] = useState<VocabularyItem | null>(null);
+  const [foundVocab, setFoundVocab] = useState<Dictionary | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateSuccess, setGenerateSuccess] = useState(false);
   const [preventClose, setPreventClose] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   // Form states for adding new vocabulary
-  const [newVocab, setNewVocab] = useState<VocabularyItem>({
-    kanji: "",
-    hiragana: "",
-    definition: "",
-    example: "",
-    translation: "",
+  const [newVocab, setNewVocab] = useState({
+    word: "",
+    reading: "",
+    type: "noun",
+    level: "N5",
   });
+
+  // New state for multiple meanings
+  const [meanings, setMeanings] = useState<
+    Array<{ meaning: string; example: string; translation: string }>
+  >([{ meaning: "", example: "", translation: "" }]);
+
   const [selectedCategoryId, setSelectedCategoryId] = useState<number>(
-    categories[0]?.id || 1
+    categories[0]?.id || 5
   );
   const [loadedCategories, setLoadedCategories] =
     useState<Category[]>(categories);
@@ -119,7 +112,7 @@ export default function JapaneseTextTooltip({
     }
   }, [categories.length]);
 
-  // Load categories if not provided
+  // Load categories if not provided (for add vocabulary feature)
   useEffect(() => {
     if (
       categories.length === 0 &&
@@ -129,6 +122,9 @@ export default function JapaneseTextTooltip({
       setIsLoadingCategories(true);
       hasLoadedCategories.current = true;
 
+      // Temporarily disabled - categories will be loaded when needed
+      // If you need categories for add vocabulary, uncomment this
+      /*
       fetchShortCategories()
         .then((data: any) => {
           // Handle different possible response structures
@@ -149,7 +145,7 @@ export default function JapaneseTextTooltip({
             id: Number(item.id),
             name: item.name,
             nameJp: item.nameJp,
-            level: item.level, // Default level since it's not in the response
+            level: item.level,
             description: item.description,
           }));
           setLoadedCategories(mappedCategories);
@@ -157,13 +153,15 @@ export default function JapaneseTextTooltip({
             setSelectedCategoryId(mappedCategories[0].id);
           }
         })
-        .catch((error) => {
+        .catch((error: any) => {
           console.error("Failed to load categories:", error);
-          hasLoadedCategories.current = false; // Reset on error so it can retry
+          hasLoadedCategories.current = false;
         })
         .finally(() => {
           setIsLoadingCategories(false);
         });
+      */
+      setIsLoadingCategories(false);
     }
   }, []); // Empty dependency array - only run once on mount
 
@@ -171,42 +169,47 @@ export default function JapaneseTextTooltip({
   const tooltipRef = useRef<HTMLDivElement>(null);
   const isAddingVocab = useRef(false);
 
+  // Set mounted state for portal
+  useEffect(() => {
+    setMounted(true);
+    return () => setMounted(false);
+  }, []);
+
   // Function to search vocabulary in database using API
   const searchVocabulary = useCallback(
-    async (text: string): Promise<VocabularyItem | null> => {
+    async (text: string): Promise<Dictionary | null> => {
       try {
-        // First check local fake database for immediate response
-        const allVocab = [...vocabulary];
-        const localFound = allVocab.find(
-          (item) => item.kanji === text || item.hiragana === text
-        );
+        // Use getDictionaryByDictionaryForm to find the word
+        const dictionaries = await getDictionaryByDictionaryForm(text);
 
-        if (localFound) {
-          return localFound;
+        if (dictionaries && dictionaries.length > 0) {
+          return dictionaries[0];
         }
 
-        // If not found locally, search via API
-        const searchResult = await searchVocabularyAPI(text);
+        // Fallback to local search if API returns empty
+        const allVocab = [...vocabulary];
+        const localFound = allVocab.find(
+          (item) => item.word === text || item.reading === text
+        );
 
-        // Return the result (single vocabulary or null)
-        return searchResult;
+        return localFound || null;
       } catch (error) {
         console.error("Error searching vocabulary:", error);
 
         // Fallback to local search if API fails
         const allVocab = [...vocabulary];
         let found = allVocab.find(
-          (item) => item.kanji === text || item.hiragana === text
+          (item) => item.word === text || item.reading === text
         );
 
         // If not found, try partial matches
         if (!found) {
           found = allVocab.find(
             (item) =>
-              (item.kanji &&
-                (text.includes(item.kanji) || item.kanji.includes(text))) ||
-              text.includes(item.hiragana) ||
-              item.hiragana.includes(text)
+              text.includes(item.word) ||
+              item.word.includes(text) ||
+              text.includes(item.reading) ||
+              item.reading.includes(text)
           );
         }
 
@@ -216,95 +219,73 @@ export default function JapaneseTextTooltip({
     [vocabulary]
   );
 
-  // Calculate optimal tooltip position
+  // Calculate optimal tooltip position - simple: above or below
   const calculateTooltipPosition = useCallback((rect: DOMRect) => {
     const tooltipWidth = 320; // w-80 = 320px
-    const tooltipHeight = 350; // estimated height
-    const margin = 10; // margin from viewport edges
-    const gap = 8; // gap between tooltip and selected text
+    const tooltipHeight = 400; // max height with scroll
+    const gap = 12; // gap between tooltip and selected text
+    const margin = 16; // margin from viewport edges
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
 
-    // Default position: center above the selection
-    let x = rect.left + rect.width / 2;
-    let y = rect.top - gap;
+    // Use absolute positioning with pageX/pageY (includes scroll)
+    const pageX = rect.left + window.scrollX;
+    const pageY = rect.top + window.scrollY;
+
+    // Center horizontally on the selected text
+    let x = pageX + rect.width / 2;
+    let y = pageY - gap;
     let transform = "translate(-50%, -100%)";
 
-    // Priority 1: Try to show above the selection
-    const hasSpaceAbove = rect.top - tooltipHeight - gap >= margin + scrollY;
-    const hasSpaceBelow =
-      rect.bottom + tooltipHeight + gap <= viewportHeight + scrollY - margin;
+    // Check if tooltip would overflow horizontally
+    const leftEdge = rect.left + rect.width / 2 - tooltipWidth / 2;
+    const rightEdge = rect.left + rect.width / 2 + tooltipWidth / 2;
 
-    // Check if tooltip would overflow horizontally when centered
-    const wouldOverflowLeft = x - tooltipWidth / 2 < margin;
-    const wouldOverflowRight = x + tooltipWidth / 2 > viewportWidth - margin;
+    // Adjust horizontal position if overflowing
+    if (leftEdge < margin) {
+      // Too close to left edge - align to left with margin
+      x = pageX - rect.left + margin + tooltipWidth / 2;
+    } else if (rightEdge > viewportWidth - margin) {
+      // Too close to right edge - align to right with margin
+      x = pageX - rect.left + viewportWidth - margin - tooltipWidth / 2;
+    }
 
-    if (hasSpaceAbove && !wouldOverflowLeft && !wouldOverflowRight) {
-      // Perfect: show centered above
-      x = rect.left + rect.width / 2;
-      y = rect.top - gap;
+    // Check vertical space
+    const spaceAbove = rect.top;
+    const spaceBelow = viewportHeight - rect.bottom;
+
+    // Priority: show above if enough space, otherwise show below
+    if (spaceAbove >= tooltipHeight + gap + margin) {
+      // Show above
+      y = pageY - gap;
       transform = "translate(-50%, -100%)";
-    } else if (hasSpaceBelow && !wouldOverflowLeft && !wouldOverflowRight) {
-      // Good: show centered below
-      x = rect.left + rect.width / 2;
-      y = rect.bottom + gap;
+    } else if (spaceBelow >= tooltipHeight + gap + margin) {
+      // Show below
+      y = pageY + rect.height + gap;
       transform = "translate(-50%, 0)";
-    } else if (hasSpaceAbove) {
-      // Show above but adjust horizontal position
-      y = rect.top - gap;
-      if (wouldOverflowLeft) {
-        x = rect.left;
-        transform = "translateY(-100%)";
-      } else if (wouldOverflowRight) {
-        x = rect.right;
-        transform = "translate(-100%, -100%)";
-      } else {
-        x = rect.left + rect.width / 2;
-        transform = "translate(-50%, -100%)";
-      }
-    } else if (hasSpaceBelow) {
-      // Show below but adjust horizontal position
-      y = rect.bottom + gap;
-      if (wouldOverflowLeft) {
-        x = rect.left;
-        transform = "translateY(0)";
-      } else if (wouldOverflowRight) {
-        x = rect.right;
-        transform = "translate(-100%, 0)";
-      } else {
-        x = rect.left + rect.width / 2;
-        transform = "translate(-50%, 0)";
-      }
+    } else if (spaceAbove > spaceBelow) {
+      // Show above even if not enough space (better than below)
+      y = pageY - gap;
+      transform = "translate(-50%, -100%)";
     } else {
-      // Last resort: show to the side
-      const centerY = rect.top + rect.height / 2;
-      const isNearLeftEdge = rect.left < viewportWidth / 2;
-
-      if (isNearLeftEdge) {
-        // Show to the right
-        x = rect.right + gap;
-        y = centerY;
-        transform = "translate(0, -50%)";
-      } else {
-        // Show to the left
-        x = rect.left - gap;
-        y = centerY;
-        transform = "translate(-100%, -50%)";
-      }
+      // Show below
+      y = pageY + rect.height + gap;
+      transform = "translate(-50%, 0)";
     }
 
     return {
-      x: x + scrollX,
-      y: y + scrollY,
+      x,
+      y,
       transform,
     };
   }, []);
 
   // Handle text selection
   const handleTextSelection = useCallback(() => {
+    // Don't trigger selection when dialog is open
+    if (showAddDialog) return;
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0) {
       setShowTooltip(false);
@@ -352,13 +333,19 @@ export default function JapaneseTextTooltip({
         setShowTooltip(true);
       }
     }, 300);
-  }, [searchVocabulary, calculateTooltipPosition]);
+  }, [searchVocabulary, calculateTooltipPosition, showAddDialog]);
 
   // Handle click outside to close tooltip
   const handleClickOutside = useCallback(
     (event: MouseEvent) => {
       // Don't close if dialog is open, about to open, or if we're adding vocab
       if (showAddDialog || preventClose || isAddingVocab.current) return;
+
+      // Check if click is inside dialog (for portal compatibility)
+      const target = event.target as HTMLElement;
+      if (target.closest('[role="dialog"]')) {
+        return;
+      }
 
       if (
         tooltipRef.current &&
@@ -377,7 +364,17 @@ export default function JapaneseTextTooltip({
   }, [showTooltip, selectedText]);
 
   useEffect(() => {
-    document.addEventListener("mouseup", handleTextSelection);
+    // Wrapper to check if event is from dialog before processing
+    const handleMouseUp = (e: MouseEvent) => {
+      // Ignore mouseup from dialog
+      const target = e.target as HTMLElement;
+      if (target.closest('[role="dialog"]')) {
+        return;
+      }
+      handleTextSelection();
+    };
+
+    document.addEventListener("mouseup", handleMouseUp);
     // Use setTimeout to delay the click listener attachment
     const timeoutId = setTimeout(() => {
       document.addEventListener("mousedown", handleClickOutside);
@@ -388,7 +385,7 @@ export default function JapaneseTextTooltip({
 
     return () => {
       clearTimeout(timeoutId);
-      document.removeEventListener("mouseup", handleTextSelection);
+      document.removeEventListener("mouseup", handleMouseUp);
       document.removeEventListener("mousedown", handleClickOutside);
       window.removeEventListener("resize", handleWindowResize);
       window.removeEventListener("scroll", handleWindowResize);
@@ -406,12 +403,12 @@ export default function JapaneseTextTooltip({
     isAddingVocab.current = true;
 
     setNewVocab({
-      kanji: selectedText,
-      hiragana: "",
-      definition: "",
-      example: "",
-      translation: "",
+      word: selectedText,
+      reading: "",
+      type: "noun",
+      level: "N5",
     });
+    setMeanings([{ meaning: "", example: "", translation: "" }]);
     setGenerateSuccess(false);
 
     // Set dialog to open
@@ -424,52 +421,67 @@ export default function JapaneseTextTooltip({
   };
 
   const handleSaveVocabulary = async () => {
-    if (!newVocab.hiragana || !newVocab.definition) {
+    if (!newVocab.reading || meanings.length === 0 || !meanings[0].meaning) {
       return;
     }
 
+    // Prevent tooltip from closing during save
+    setPreventClose(true);
+    setIsLoading(true);
+
     try {
-      // Use the createVocabulary function from lib/vocabulary.ts
-      const result = await createVocabulary({
-        kanji: newVocab.kanji || "",
-        hiragana: newVocab.hiragana,
-        definition: newVocab.definition,
-        example: newVocab.example || undefined,
-        translation: newVocab.translation || "", // Provide empty string if no translation
-        categoryId: selectedCategoryId,
-      });
+      // Filter out empty meanings
+      const validMeanings = meanings.filter((m) => m.meaning.trim().length > 0);
 
-      if (result) {
-        // Transform the result to match VocabularyItem interface
-        const vocabularyItem: VocabularyItem = {
-          id: result.id,
-          kanji: newVocab.kanji,
-          hiragana: newVocab.hiragana,
-          definition: result.definition,
-          example: newVocab.example,
-          translation: result.translation,
-          category: loadedCategories.find(
-            (cat) => cat.id === selectedCategoryId
-          ),
-        };
+      if (validMeanings.length === 0) {
+        alert("Vui lòng nhập ít nhất một nghĩa!");
+        setIsLoading(false);
+        setPreventClose(false);
+        return;
+      }
 
-        onAddVocabulary?.(vocabularyItem);
+      // Prepare data for Dictionary API
+      const dictionaryData = {
+        word: newVocab.word || selectedText,
+        reading: newVocab.reading,
+        meanings: validMeanings.map((m) => ({
+          meaning: m.meaning.trim(),
+          example: m.example.trim() || "",
+          translation: m.translation.trim() || "",
+        })),
+        type: newVocab.type || "noun",
+        level: newVocab.level || "N5",
+      };
+
+      // Call createDictionary API
+      const result = await createDictionary(dictionaryData);
+
+      // Pass the result directly as it's already a Dictionary type
+      onAddVocabulary?.(result);
+
+      // Show success message
+      setGenerateSuccess(true);
+      setTimeout(() => {
         setShowAddDialog(false);
         setShowTooltip(false);
-
-        // Reset form
-        setNewVocab({
-          kanji: "",
-          hiragana: "",
-          definition: "",
-          example: "",
-          translation: "",
-        });
         setGenerateSuccess(false);
-      }
+        setPreventClose(false);
+      }, 1500);
+
+      // Reset form
+      setNewVocab({
+        word: "",
+        reading: "",
+        type: "noun",
+        level: "N5",
+      });
+      setMeanings([{ meaning: "", example: "", translation: "" }]);
     } catch (error) {
       console.error("Error saving vocabulary:", error);
-      // You could add error state/toast notification here
+      alert("Có lỗi xảy ra khi lưu từ vựng. Vui lòng thử lại!");
+      setPreventClose(false);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -502,96 +514,29 @@ export default function JapaneseTextTooltip({
       const result = await response.json();
 
       if (result.success && result.data) {
-        setNewVocab((prev) => ({
+        setNewVocab((prev: typeof newVocab) => ({
           ...prev,
-          hiragana: result.data.hiragana,
-          definition: result.data.definition,
-          example: result.data.example,
-          translation: result.data.translation,
+          reading: result.data.hiragana,
+          type: result.data.type || "noun",
         }));
+
+        // Set meanings array
+        if (result.data.meanings && Array.isArray(result.data.meanings)) {
+          setMeanings(result.data.meanings);
+        }
 
         // Show success feedback
         setGenerateSuccess(true);
         setTimeout(() => setGenerateSuccess(false), 3000);
       } else {
         // Use fallback data if API fails
-        const fallbackData =
-          result.data || generateMockAIResponse(selectedText);
-        setNewVocab((prev) => ({
-          ...prev,
-          hiragana: fallbackData.hiragana,
-          definition: fallbackData.definition,
-          example: fallbackData.example,
-          translation: fallbackData.translation,
-        }));
-
         console.warn("AI Generate failed, using fallback:", result.error);
       }
     } catch (error) {
       console.error("AI Generate failed:", error);
-
-      // Use mock data as fallback
-      const fallbackData = generateMockAIResponse(selectedText);
-      setNewVocab((prev) => ({
-        ...prev,
-        hiragana: fallbackData.hiragana,
-        definition: fallbackData.definition,
-        example: fallbackData.example,
-        translation: fallbackData.translation,
-      }));
     } finally {
       setIsGenerating(false);
     }
-  };
-
-  // Mock AI response generator
-  const generateMockAIResponse = (word: string) => {
-    // Đây là mock response, trong thực tế sẽ thay bằng API call tới AI service
-    const responses: { [key: string]: any } = {
-      今日: {
-        hiragana: "きょう",
-        definition: "hôm nay",
-        example: "今日は暑いです。",
-        translation: "Hôm nay trời nóng.",
-      },
-      昨日: {
-        hiragana: "きのう",
-        definition: "hôm qua",
-        example: "昨日映画を見ました。",
-        translation: "Hôm qua tôi đã xem phim.",
-      },
-      明日: {
-        hiragana: "あした",
-        definition: "ngày mai",
-        example: "明日学校に行きます。",
-        translation: "Ngày mai tôi sẽ đi học.",
-      },
-      学校: {
-        hiragana: "がっこう",
-        definition: "trường học",
-        example: "学校で勉強します。",
-        translation: "Tôi học ở trường.",
-      },
-      勉強: {
-        hiragana: "べんきょう",
-        definition: "học tập",
-        example: "日本語を勉強します。",
-        translation: "Tôi học tiếng Nhật.",
-      },
-    };
-
-    // Return specific response if available, otherwise generate generic one
-    if (responses[word]) {
-      return responses[word];
-    }
-
-    // Generic response for unknown words
-    return {
-      hiragana: "よみかた", // placeholder
-      definition: "nghĩa của từ",
-      example: `${word}を使います。`,
-      translation: `Sử dụng ${word}.`,
-    };
   };
 
   const getLevelColor = (level?: string) => {
@@ -609,159 +554,191 @@ export default function JapaneseTextTooltip({
     <div ref={containerRef} className={`relative ${className}`}>
       {children}
 
-      {/* Tooltip */}
-      {showTooltip && tooltipPosition && (
-        <div
-          ref={tooltipRef}
-          className={`fixed z-50 pointer-events-auto transition-all duration-200 ease-out ${
-            showAddDialog ? "opacity-0 pointer-events-none" : "opacity-100"
-          }`}
-          style={{
-            left: `${tooltipPosition.x}px`,
-            top: `${tooltipPosition.y}px`,
-            transform: tooltipPosition.transform || "translate(-50%, -100%)",
-          }}
-        >
-          <Card className="w-80 shadow-xl border-2 bg-white animate-in fade-in-0 zoom-in-95 duration-200 relative">
-            {/* Arrow pointer */}
-            <div
-              className={`absolute w-3 h-3 bg-white border-l border-t border-gray-200 transform rotate-45 ${
-                tooltipPosition.transform?.includes("-100%, 0") ||
-                tooltipPosition.transform?.includes("-50%, 0") ||
-                tooltipPosition.transform?.includes("translateY(0)")
-                  ? "top-[-6px] left-1/2 -translate-x-1/2" // Arrow on top when tooltip is below
-                  : "bottom-[-6px] left-1/2 -translate-x-1/2" // Arrow on bottom when tooltip is above
-              }`}
-            />
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <BookOpen className="h-5 w-5 text-blue-600" />
-                  <span
-                    className="font-bold"
-                    style={{
-                      fontFamily:
-                        "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
-                    }}
-                  >
-                    {selectedText}
-                  </span>
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowTooltip(false)}
-                  className="h-6 w-6 p-0"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-
-            <CardContent className="pt-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-4">
-                  <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
-                  <span className="ml-2 text-sm text-gray-600">
-                    Đang tìm kiếm...
-                  </span>
-                </div>
-              ) : foundVocab ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div
-                      className="text-lg font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded"
+      {/* Tooltip - Rendered via Portal */}
+      {mounted &&
+        showTooltip &&
+        tooltipPosition &&
+        createPortal(
+          <div
+            ref={tooltipRef}
+            className={`absolute z-50 pointer-events-auto transition-all duration-200 ease-out ${
+              showAddDialog ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+            style={{
+              left: `${tooltipPosition.x}px`,
+              top: `${tooltipPosition.y}px`,
+              transform: tooltipPosition.transform || "translate(-50%, -100%)",
+            }}
+          >
+            <Card className="w-80 shadow-xl border-2 bg-white animate-in fade-in-0 zoom-in-95 duration-200 relative max-h-[70vh] flex flex-col">
+              {/* Arrow pointer */}
+              <div
+                className={`absolute w-3 h-3 bg-white border-l border-t border-gray-200 transform rotate-45 ${
+                  tooltipPosition.transform?.includes("translate(-50%, 0)")
+                    ? "top-[-6px] left-1/2 -translate-x-1/2" // Arrow on top when tooltip is below
+                    : "bottom-[-6px] left-1/2 -translate-x-1/2" // Arrow on bottom when tooltip is above
+                }`}
+              />
+              <CardHeader className="pb-2 shrink-0">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <BookOpen className="h-4 w-4 text-blue-600" />
+                    <span
+                      className="font-bold"
                       style={{
                         fontFamily:
                           "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
                       }}
                     >
-                      {foundVocab.hiragana}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {foundVocab.category?.level && (
-                        <Badge
-                          className={getLevelColor(foundVocab.category.level)}
-                          variant="secondary"
-                        >
-                          {foundVocab.category.level}
-                        </Badge>
-                      )}
-                      <Button variant="ghost" size="sm">
-                        <Volume2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+                      {selectedText}
+                    </span>
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowTooltip(false)}
+                    className="h-6 w-6 p-0"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </CardHeader>
 
-                  <div>
-                    <p className="text-gray-900 font-medium">
-                      <span className="text-gray-600">Nghĩa:</span>{" "}
-                      {foundVocab.definition}
-                    </p>
-                    {foundVocab.category && (
-                      <p className="text-sm text-gray-600 mt-1">
-                        <span className="font-medium">Danh mục:</span>{" "}
-                        {foundVocab.category.name} ({foundVocab.category.nameJp}
-                        )
-                      </p>
-                    )}
+              <CardContent className="pt-0 pb-3 overflow-y-auto flex-1">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <Loader2 className="h-6 w-6 animate-spin text-blue-600" />
+                    <span className="ml-2 text-sm text-gray-600">
+                      Đang tìm kiếm...
+                    </span>
                   </div>
-
-                  {foundVocab.example && (
-                    <div className="bg-gray-50 p-3 rounded border-l-4 border-blue-200">
-                      <p className="text-sm font-medium text-gray-700 mb-1">
-                        Ví dụ:
-                      </p>
-                      <p
-                        className="text-gray-800"
+                ) : foundVocab ? (
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <div
+                        className="text-base font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded"
                         style={{
                           fontFamily:
                             "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
                         }}
                       >
-                        {foundVocab.example}
-                      </p>
+                        {foundVocab.reading}
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        {foundVocab.level && (
+                          <Badge
+                            className={getLevelColor(foundVocab.level)}
+                            variant="secondary"
+                          >
+                            {foundVocab.level}
+                          </Badge>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                        >
+                          <Volume2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <Search className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600 mb-3">
-                    Không tìm thấy từ vựng trong cơ sở dữ liệu
-                  </p>
-                  <Button
-                    size="sm"
-                    className="bg-rose-600 hover:bg-rose-700"
-                    onMouseDown={(e) => {
-                      handleAddVocabulary(e);
-                    }}
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Thêm từ vựng
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-xs">
+                        {foundVocab.type}
+                      </Badge>
+                    </div>
+                    <div>
+                      <p className="text-gray-700 font-medium mb-1.5 text-xs">
+                        Nghĩa:
+                      </p>
+                      <div className="space-y-2">
+                        {foundVocab.meanings.map(
+                          (meaningObj: DictionaryMeaning, index: number) => {
+                            return (
+                              <div key={index} className="ml-1.5">
+                                <div className="flex items-start gap-1.5">
+                                  <span className="text-blue-600 font-medium mt-0.5 text-sm">
+                                    •
+                                  </span>
+                                  <div className="flex-1 space-y-1">
+                                    <p className="text-gray-900 font-medium text-sm">
+                                      {meaningObj.meaning}
+                                    </p>
+                                    {meaningObj.example && (
+                                      <div className="pl-2.5 border-l-2 border-blue-200 bg-blue-50 py-1 px-2 rounded-r space-y-0.5">
+                                        <p
+                                          className="text-xs text-gray-800"
+                                          style={{
+                                            fontFamily:
+                                              "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
+                                          }}
+                                        >
+                                          {meaningObj.example}
+                                        </p>
+                                        {meaningObj.translation && (
+                                          <p className="text-xs text-gray-600 italic">
+                                            → {meaningObj.translation}
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          }
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-3">
+                    <Search className="h-7 w-7 text-gray-400 mx-auto mb-2" />
+                    <p className="text-xs text-gray-600 mb-2">
+                      Không tìm thấy từ vựng trong cơ sở dữ liệu
+                    </p>
+                    <Button
+                      size="sm"
+                      className="bg-rose-600 hover:bg-rose-700 h-8 text-xs"
+                      onMouseDown={(e) => {
+                        handleAddVocabulary(e);
+                      }}
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Thêm từ vựng
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>,
+          document.body
+        )}
 
       {/* Add Vocabulary Dialog - Separate from tooltip */}
       <Dialog open={showAddDialog} onOpenChange={handleDialogClose}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="h-5 w-5" />
+        <DialogContent
+          className="sm:max-w-md max-h-[85vh] flex flex-col p-0"
+          onPointerDownOutside={(e) => {
+            // Prevent dialog from closing when clicking outside during operations
+            if (isLoading || isGenerating) {
+              e.preventDefault();
+            }
+          }}
+        >
+          <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+            <DialogTitle className="flex items-center gap-2 text-base">
+              <Plus className="h-4 w-4" />
               Thêm từ vựng mới
             </DialogTitle>
-            <DialogDescription>
-              Nhập thông tin chi tiết cho từ vựng "{selectedText}"
+            <DialogDescription className="text-sm">
+              "{selectedText}"
             </DialogDescription>
           </DialogHeader>
 
           {/* Auto Generate Button */}
-          <div className="flex flex-col items-center pb-4 border-b">
+          <div className="flex flex-col items-center px-6 pb-3 border-b shrink-0">
             <Button
               onClick={handleAutoGenerate}
               disabled={isGenerating}
@@ -781,25 +758,29 @@ export default function JapaneseTextTooltip({
               )}
             </Button>
             {generateSuccess && (
-              <div className="flex items-center mt-2 text-sm text-green-600 animate-in fade-in-0 duration-300">
-                <CheckCircle className="h-4 w-4 mr-1" />
+              <div className="flex items-center mt-1.5 text-xs text-green-600 animate-in fade-in-0 duration-300">
+                <CheckCircle className="h-3 w-3 mr-1" />
                 Tạo thành công!
               </div>
             )}
           </div>
 
-          <div className="space-y-4">
+          {/* Scrollable Form Content */}
+          <div className="overflow-y-auto px-6 py-3 space-y-3 flex-1">
             <div>
-              <Label htmlFor="kanji">Kanji</Label>
+              <Label htmlFor="word" className="text-xs font-medium">
+                Kanji
+              </Label>
               <Input
-                id="kanji"
-                value={newVocab.kanji || ""}
+                id="word"
+                value={newVocab.word || ""}
                 onChange={(e) =>
-                  setNewVocab((prev) => ({
+                  setNewVocab((prev: typeof newVocab) => ({
                     ...prev,
-                    kanji: e.target.value,
+                    word: e.target.value,
                   }))
                 }
+                className="h-9 text-sm"
                 style={{
                   fontFamily:
                     "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -808,19 +789,21 @@ export default function JapaneseTextTooltip({
             </div>
 
             <div>
-              <Label htmlFor="hiragana">Cách đọc (hiragana/katakana) *</Label>
+              <Label htmlFor="reading" className="text-xs font-medium">
+                Cách đọc *
+              </Label>
               <Input
-                id="hiragana"
-                value={newVocab.hiragana}
+                id="reading"
+                value={newVocab.reading}
                 onChange={(e) =>
-                  setNewVocab((prev) => ({
+                  setNewVocab((prev: typeof newVocab) => ({
                     ...prev,
-                    hiragana: e.target.value,
+                    reading: e.target.value,
                   }))
                 }
                 placeholder="ví dụ: ともだち"
                 disabled={isGenerating}
-                className={isGenerating ? "opacity-50" : ""}
+                className={`h-9 text-sm ${isGenerating ? "opacity-50" : ""}`}
                 style={{
                   fontFamily:
                     "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -834,92 +817,217 @@ export default function JapaneseTextTooltip({
               )}
             </div>
 
-            <div>
-              <Label htmlFor="definition">Nghĩa tiếng Việt *</Label>
-              <Input
-                id="definition"
-                value={newVocab.definition}
-                onChange={(e) =>
-                  setNewVocab((prev) => ({
-                    ...prev,
-                    definition: e.target.value,
-                  }))
-                }
-                placeholder="ví dụ: bạn bè"
-                disabled={isGenerating}
-                className={isGenerating ? "opacity-50" : ""}
-              />
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <Label htmlFor="type" className="text-xs font-medium">
+                  Loại từ
+                </Label>
+                <select
+                  id="type"
+                  value={newVocab.type || "noun"}
+                  onChange={(e) =>
+                    setNewVocab((prev: typeof newVocab) => ({
+                      ...prev,
+                      type: e.target.value,
+                    }))
+                  }
+                  disabled={isGenerating}
+                  className={`w-full h-9 px-3 text-sm border border-gray-300 rounded-md ${
+                    isGenerating ? "opacity-50" : ""
+                  }`}
+                >
+                  <option value="noun">Danh từ</option>
+                  <option value="verb">Động từ</option>
+                  <option value="adjective">Tính từ</option>
+                  <option value="adverb">Phó từ</option>
+                  <option value="particle">Trợ từ</option>
+                  <option value="expression">Thành ngữ</option>
+                </select>
+              </div>
+
+              <div>
+                <Label htmlFor="level" className="text-xs font-medium">
+                  Cấp độ
+                </Label>
+                <select
+                  id="level"
+                  value={newVocab.level || "N5"}
+                  onChange={(e) =>
+                    setNewVocab((prev: typeof newVocab) => ({
+                      ...prev,
+                      level: e.target.value,
+                    }))
+                  }
+                  disabled={isGenerating}
+                  className={`w-full h-9 px-3 text-sm border border-gray-300 rounded-md ${
+                    isGenerating ? "opacity-50" : ""
+                  }`}
+                >
+                  <option value="N5">N5</option>
+                  <option value="N4">N4</option>
+                  <option value="N3">N3</option>
+                  <option value="N2">N2</option>
+                  <option value="N1">N1</option>
+                </select>
+              </div>
             </div>
 
             <div>
-              <Label htmlFor="category">Danh mục</Label>
-              <select
-                id="category"
-                value={selectedCategoryId}
-                onChange={(e) => setSelectedCategoryId(Number(e.target.value))}
-                disabled={isGenerating}
-                className={`w-full p-2 border border-gray-300 rounded-md ${
-                  isGenerating ? "opacity-50" : ""
-                }`}
-              >
-                {loadedCategories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name} ({category.nameJp})
-                  </option>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-xs font-medium">Nghĩa *</Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setMeanings([
+                      ...meanings,
+                      { meaning: "", example: "", translation: "" },
+                    ])
+                  }
+                  disabled={isGenerating}
+                  className="h-7 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Thêm
+                </Button>
+              </div>
+
+              <div className="space-y-2.5">
+                {meanings.map((item, index) => (
+                  <div
+                    key={index}
+                    className="border p-3 rounded-md bg-gray-50/50 relative"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-semibold text-gray-700">
+                        Nghĩa {index + 1}
+                      </span>
+                      {meanings.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setMeanings(meanings.filter((_, i) => i !== index))
+                          }
+                          disabled={isGenerating}
+                          className="h-5 w-5 p-0"
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="space-y-2">
+                      <div>
+                        <Label htmlFor={`meaning-${index}`} className="text-xs">
+                          Nghĩa *
+                        </Label>
+                        <Input
+                          id={`meaning-${index}`}
+                          value={item.meaning}
+                          onChange={(e) => {
+                            const newMeanings = [...meanings];
+                            newMeanings[index].meaning = e.target.value;
+                            setMeanings(newMeanings);
+                          }}
+                          placeholder="bạn bè"
+                          disabled={isGenerating}
+                          className={`h-8 text-sm ${
+                            isGenerating ? "opacity-50" : ""
+                          }`}
+                        />
+                      </div>
+
+                      <div>
+                        <Label htmlFor={`example-${index}`} className="text-xs">
+                          Ví dụ
+                        </Label>
+                        <Input
+                          id={`example-${index}`}
+                          value={item.example}
+                          onChange={(e) => {
+                            const newMeanings = [...meanings];
+                            newMeanings[index].example = e.target.value;
+                            setMeanings(newMeanings);
+                          }}
+                          placeholder="友達と遊びます。"
+                          disabled={isGenerating}
+                          className={`h-8 text-sm ${
+                            isGenerating ? "opacity-50" : ""
+                          }`}
+                          style={{
+                            fontFamily:
+                              "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
+                          }}
+                        />
+                      </div>
+
+                      <div>
+                        <Label
+                          htmlFor={`translation-${index}`}
+                          className="text-xs"
+                        >
+                          Dịch nghĩa
+                        </Label>
+                        <Input
+                          id={`translation-${index}`}
+                          value={item.translation}
+                          onChange={(e) => {
+                            const newMeanings = [...meanings];
+                            newMeanings[index].translation = e.target.value;
+                            setMeanings(newMeanings);
+                          }}
+                          placeholder="Chơi với bạn bè"
+                          disabled={isGenerating}
+                          className={`h-8 text-sm ${
+                            isGenerating ? "opacity-50" : ""
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  </div>
                 ))}
-              </select>
-            </div>
-
-            <div>
-              <Label htmlFor="translation">Dịch nghĩa</Label>
-              <Input
-                id="translation"
-                value={newVocab.translation || ""}
-                onChange={(e) =>
-                  setNewVocab((prev) => ({
-                    ...prev,
-                    translation: e.target.value,
-                  }))
-                }
-                placeholder="ví dụ: Tôi đi cùng với bạn bè"
-                disabled={isGenerating}
-                className={isGenerating ? "opacity-50" : ""}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="example">Ví dụ</Label>
-              <Textarea
-                id="example"
-                value={newVocab.example}
-                onChange={(e) =>
-                  setNewVocab((prev) => ({
-                    ...prev,
-                    example: e.target.value,
-                  }))
-                }
-                placeholder="ví dụ: 友達と一緒に行きます。"
-                disabled={isGenerating}
-                className={isGenerating ? "opacity-50" : ""}
-                style={{
-                  fontFamily:
-                    "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
-                }}
-              />
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-end gap-2 mt-6">
-            <Button variant="outline" onClick={() => setShowAddDialog(false)}>
+          {/* Fixed Footer */}
+          <div className="flex justify-end gap-2 px-6 py-3 border-t bg-gray-50/50 shrink-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowAddDialog(false)}
+              disabled={isLoading}
+              className="h-9"
+            >
               Hủy
             </Button>
             <Button
               onClick={handleSaveVocabulary}
-              disabled={!newVocab.hiragana || !newVocab.definition}
-              className="bg-rose-600 hover:bg-rose-700"
+              disabled={
+                !newVocab.reading ||
+                meanings.length === 0 ||
+                !meanings[0].meaning ||
+                isLoading
+              }
+              className="bg-rose-600 hover:bg-rose-700 h-9"
+              onMouseDown={(e) => {
+                // Prevent any interference from tooltip click handlers
+                e.stopPropagation();
+              }}
             >
-              <Save className="h-4 w-4 mr-2" />
-              Lưu từ vựng
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Đang lưu...
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Lưu
+                </>
+              )}
             </Button>
           </div>
         </DialogContent>

@@ -75,6 +75,12 @@
       "Helvetica Neue", Arial, sans-serif;
     font-weight: 500;
   }
+
+  .font-japanese {
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", 
+      "Yu Gothic", "Meiryo", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 400;
+  }
 }
 
 @layer utilities {
