@@ -3,7 +3,6 @@
 import { useState, useEffect, use } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   RotateCcw,
   ChevronLeft,
   ChevronRight,
@@ -15,15 +14,12 @@ import {
   ChevronsRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
 import { Card, CardContent } from "@/components/ui/card";
 import AppLayout from "@/components/app-layout";
-import SmartPagination from "@/components/smart-pagination";
 import PageHeader from "@/components/page-header";
 import { getCategoryById } from "@/lib/category";
 import { updateVocabularyStatus } from "@/lib/vocabulary";
-import { ElevenLabsClient, play } from "@elevenlabs/elevenlabs-js";
+import { useTTS } from "@/hooks/use-tts";
 
 interface Word {
   id: number;
@@ -50,6 +46,7 @@ export default function FlashcardPage({
   params: Promise<{ category: string }>;
 }) {
   const { category: categoryId } = use(params);
+  const { speak } = useTTS();
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
@@ -138,22 +135,8 @@ export default function FlashcardPage({
     setCompletedCards(new Set());
   };
 
-  const handleSpeak = async () => {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: currentWord.hiragana }),
-      });
-      if (!res.ok) throw new Error("Không thể gọi API server");
-      const arrayBuffer = await res.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-    } catch (err: any) {
-      alert("Không phát được âm thanh: " + err.message);
-    }
+  const handleSpeak = () => {
+    speak(currentWord.hiragana);
   };
 
   return (
@@ -260,7 +243,7 @@ export default function FlashcardPage({
                 <CardContent className="h-full flex flex-col justify-center p-6 bg-white rounded-xl">
                   <div className="space-y-6">
                     <div className="text-center">
-                      <div className="text-xl japanese-text text-primary-600 font-bold mb-2">
+                      <div className="text-3xl japanese-text text-primary-600 font-bold mb-2">
                         {currentWord.kanji}
                       </div>
                       <div className="text-2xl font-bold text-gray-900 mb-4">

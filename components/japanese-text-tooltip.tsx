@@ -42,6 +42,171 @@ import {
   type DictionaryMeaning,
 } from "@/lib/dictionary";
 
+// Cache configuration
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+const CACHE_KEY_PREFIX = "vocab_cache_";
+const CACHE_VERSION = "v1";
+
+interface CacheEntry {
+  data: Dictionary | null;
+  timestamp: number;
+  version: string;
+}
+
+// In-memory cache for fast access
+const memoryCache = new Map<string, CacheEntry>();
+
+// Cache utilities
+const getCacheKey = (text: string) => `${CACHE_KEY_PREFIX}${text}`;
+
+const getFromCache = (text: string): Dictionary | null | undefined => {
+  // Check memory cache first (fastest)
+  const memoryCached = memoryCache.get(text);
+  if (memoryCached) {
+    const isExpired = Date.now() - memoryCached.timestamp > CACHE_DURATION;
+    if (!isExpired && memoryCached.version === CACHE_VERSION) {
+      const data = memoryCached.data;
+      // Validate cached data
+      if (data && (!data.meanings || !Array.isArray(data.meanings))) {
+        console.warn(
+          `Cached data has invalid meanings, removing from cache: ${text}`
+        );
+        memoryCache.delete(text);
+        return undefined;
+      }
+      return data;
+    } else {
+      memoryCache.delete(text);
+    }
+  }
+
+  // Check localStorage (slower but persists)
+  try {
+    const cacheKey = getCacheKey(text);
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      const entry: CacheEntry = JSON.parse(cached);
+      const isExpired = Date.now() - entry.timestamp > CACHE_DURATION;
+
+      if (!isExpired && entry.version === CACHE_VERSION) {
+        const data = entry.data;
+        // Validate cached data
+        if (data && (!data.meanings || !Array.isArray(data.meanings))) {
+          console.warn(
+            `localStorage data has invalid meanings, removing: ${text}`
+          );
+          localStorage.removeItem(cacheKey);
+          return undefined;
+        }
+        // Restore to memory cache
+        memoryCache.set(text, entry);
+        return data;
+      } else {
+        // Remove expired cache
+        localStorage.removeItem(cacheKey);
+      }
+    }
+  } catch (error) {
+    console.error("Error reading from cache:", error);
+  }
+
+  return undefined; // Cache miss
+};
+
+const saveToCache = (text: string, data: Dictionary | null) => {
+  // Validate data before caching
+  if (data && (!data.meanings || !Array.isArray(data.meanings))) {
+    console.warn(`Fixing invalid meanings before caching for: ${text}`);
+    data.meanings = [];
+  }
+
+  const entry: CacheEntry = {
+    data,
+    timestamp: Date.now(),
+    version: CACHE_VERSION,
+  };
+
+  // Save to memory cache
+  memoryCache.set(text, entry);
+
+  // Save to localStorage
+  try {
+    const cacheKey = getCacheKey(text);
+    localStorage.setItem(cacheKey, JSON.stringify(entry));
+  } catch (error) {
+    console.error("Error saving to cache:", error);
+    // If localStorage is full, clear old entries
+    clearOldCache();
+  }
+};
+
+const clearOldCache = () => {
+  try {
+    const now = Date.now();
+    const keysToRemove: string[] = [];
+
+    // Find expired keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        try {
+          const cached = localStorage.getItem(key);
+          if (cached) {
+            const entry: CacheEntry = JSON.parse(cached);
+            const isExpired = now - entry.timestamp > CACHE_DURATION;
+            if (isExpired || entry.version !== CACHE_VERSION) {
+              keysToRemove.push(key);
+            }
+          }
+        } catch (error) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    // Remove expired keys
+    keysToRemove.forEach((key) => {
+      localStorage.removeItem(key);
+      const text = key.replace(CACHE_KEY_PREFIX, "");
+      memoryCache.delete(text);
+    });
+
+    console.log(`Cleared ${keysToRemove.length} expired cache entries`);
+  } catch (error) {
+    console.error("Error clearing old cache:", error);
+  }
+};
+
+// Clear cache on component mount (remove expired entries)
+if (typeof window !== "undefined") {
+  // Run once when module loads
+  setTimeout(clearOldCache, 1000);
+}
+
+// Export utility to clear cache manually (can be called from console)
+export const clearVocabularyCache = () => {
+  console.log("Manually clearing vocabulary cache...");
+  memoryCache.clear();
+  try {
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(CACHE_KEY_PREFIX)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
+    console.log(`Cleared ${keysToRemove.length} cache entries`);
+  } catch (error) {
+    console.error("Error clearing cache:", error);
+  }
+};
+
+// Expose to window for debugging (development only)
+if (typeof window !== "undefined" && process.env.NODE_ENV === "development") {
+  (window as any).clearVocabularyCache = clearVocabularyCache;
+}
+
 interface Category {
   id: number;
   name: string;
@@ -175,15 +340,34 @@ export default function JapaneseTextTooltip({
     return () => setMounted(false);
   }, []);
 
-  // Function to search vocabulary in database using API
+  // Function to search vocabulary in database using API with caching
   const searchVocabulary = useCallback(
     async (text: string): Promise<Dictionary | null> => {
+      // Check cache first
+      const cached = getFromCache(text);
+      if (cached !== undefined) {
+        console.log(`Cache HIT for: ${text}`);
+        return cached;
+      }
+
+      console.log(`Cache MISS for: ${text}, fetching from API...`);
+
       try {
         // Use getDictionaryByDictionaryForm to find the word
         const dictionaries = await getDictionaryByDictionaryForm(text);
 
         if (dictionaries && dictionaries.length > 0) {
-          return dictionaries[0];
+          const result = dictionaries[0];
+
+          // Validate and fix meanings field if needed
+          if (!result.meanings || !Array.isArray(result.meanings)) {
+            console.warn(`Invalid meanings for word: ${text}`, result);
+            result.meanings = [];
+          }
+
+          // Save to cache
+          saveToCache(text, result);
+          return result;
         }
 
         // Fallback to local search if API returns empty
@@ -192,6 +376,8 @@ export default function JapaneseTextTooltip({
           (item) => item.word === text || item.reading === text
         );
 
+        // Save to cache (even if null)
+        saveToCache(text, localFound || null);
         return localFound || null;
       } catch (error) {
         console.error("Error searching vocabulary:", error);
@@ -213,6 +399,8 @@ export default function JapaneseTextTooltip({
           );
         }
 
+        // Save to cache
+        saveToCache(text, found || null);
         return found || null;
       }
     },
@@ -459,6 +647,11 @@ export default function JapaneseTextTooltip({
       // Pass the result directly as it's already a Dictionary type
       onAddVocabulary?.(result);
 
+      // Invalidate cache for this word (so it shows the new data next time)
+      const cacheKey = getCacheKey(newVocab.word || selectedText);
+      localStorage.removeItem(cacheKey);
+      memoryCache.delete(newVocab.word || selectedText);
+
       // Show success message
       setGenerateSuccess(true);
       setTimeout(() => {
@@ -653,41 +846,49 @@ export default function JapaneseTextTooltip({
                         Nghĩa:
                       </p>
                       <div className="space-y-2">
-                        {foundVocab.meanings.map(
-                          (meaningObj: DictionaryMeaning, index: number) => {
-                            return (
-                              <div key={index} className="ml-1.5">
-                                <div className="flex items-start gap-1.5">
-                                  <span className="text-blue-600 font-medium mt-0.5 text-sm">
-                                    •
-                                  </span>
-                                  <div className="flex-1 space-y-1">
-                                    <p className="text-gray-900 font-medium text-sm">
-                                      {meaningObj.meaning}
-                                    </p>
-                                    {meaningObj.example && (
-                                      <div className="pl-2.5 border-l-2 border-blue-200 bg-blue-50 py-1 px-2 rounded-r space-y-0.5">
-                                        <p
-                                          className="text-xs text-gray-800"
-                                          style={{
-                                            fontFamily:
-                                              "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
-                                          }}
-                                        >
-                                          {meaningObj.example}
-                                        </p>
-                                        {meaningObj.translation && (
-                                          <p className="text-xs text-gray-600 italic">
-                                            → {meaningObj.translation}
+                        {foundVocab.meanings &&
+                        Array.isArray(foundVocab.meanings) &&
+                        foundVocab.meanings.length > 0 ? (
+                          foundVocab.meanings.map(
+                            (meaningObj: DictionaryMeaning, index: number) => {
+                              return (
+                                <div key={index} className="ml-1.5">
+                                  <div className="flex items-start gap-1.5">
+                                    <span className="text-blue-600 font-medium mt-0.5 text-sm">
+                                      •
+                                    </span>
+                                    <div className="flex-1 space-y-1">
+                                      <p className="text-gray-900 font-medium text-sm">
+                                        {meaningObj.meaning}
+                                      </p>
+                                      {meaningObj.example && (
+                                        <div className="pl-2.5 border-l-2 border-blue-200 bg-blue-50 py-1 px-2 rounded-r space-y-0.5">
+                                          <p
+                                            className="text-xs text-gray-800"
+                                            style={{
+                                              fontFamily:
+                                                "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
+                                            }}
+                                          >
+                                            {meaningObj.example}
                                           </p>
-                                        )}
-                                      </div>
-                                    )}
+                                          {meaningObj.translation && (
+                                            <p className="text-xs text-gray-600 italic">
+                                              → {meaningObj.translation}
+                                            </p>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          }
+                              );
+                            }
+                          )
+                        ) : (
+                          <p className="text-sm text-gray-500 italic ml-1.5">
+                            Không có thông tin nghĩa
+                          </p>
                         )}
                       </div>
                     </div>

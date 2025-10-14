@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/app-layout";
 import { Volume2, User, Play, RotateCcw } from "lucide-react";
 import { getConversationById, Conversation } from "@/lib/conversation";
+import { useTTS } from "@/hooks/use-tts";
 
 // Nếu muốn dùng Framer Motion cho animation
 import { AnimatePresence, motion } from "framer-motion";
@@ -45,6 +46,7 @@ export default function KaiwaDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = Number(params?.id);
+  const { speak } = useTTS();
 
   const [kaiwa, setKaiwa] = useState<Kaiwa | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,23 +82,9 @@ export default function KaiwaDetailPage() {
     if (id) fetchKaiwa();
   }, [id]);
 
-  async function speakJapanese(text: string) {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) throw new Error("Không thể gọi API server");
-      const arrayBuffer = await res.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-    } catch (err: any) {
-      alert("Không phát được âm thanh: " + err.message);
-    }
-  }
+  const speakJapanese = (text: string) => {
+    speak(text);
+  };
 
   const roles: string[] =
     kaiwa && kaiwa.conversation

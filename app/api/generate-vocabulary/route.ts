@@ -127,9 +127,21 @@ ${batchPrompt}`;
 
 async function parseSingleWordResponse(responseText: string) {
   try {
-    let vocabularyData;
-    // First try direct parsing
-    vocabularyData = JSON.parse(responseText);
+    let jsonText = responseText;
+
+    // Remove markdown code blocks
+    jsonText = jsonText.replace(/```json\s*\n/g, "").replace(/```\s*$/g, "");
+    jsonText = jsonText.replace(/```\s*\n/g, "").replace(/```\s*$/g, "");
+
+    // Try to find JSON object between { and }
+    const jsonMatch = jsonText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      jsonText = jsonMatch[0];
+    }
+
+    jsonText = jsonText.trim();
+
+    const vocabularyData = JSON.parse(jsonText);
 
     // Validate required fields
     const requiredFields = ["hiragana", "meanings", "type"];
@@ -155,6 +167,7 @@ async function parseSingleWordResponse(responseText: string) {
     });
   } catch (parseError) {
     console.error("Failed to parse single word response:", responseText);
+    console.error("Parse error:", parseError);
     throw new Error("Could not parse vocabulary data from AI response");
   }
 }

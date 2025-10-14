@@ -38,7 +38,7 @@ export default function MemoryPage() {
     async function fetchCategories() {
       try {
         const data: any = await fetchShortCategories();
-        setCategories(data.items || []);
+        setCategories(data || []);
       } catch (err) {
         setCategories([]);
       }

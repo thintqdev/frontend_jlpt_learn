@@ -16,6 +16,7 @@ import AppLayout from "@/components/app-layout";
 import { getCategoryById, fetchShortCategories } from "@/lib/category";
 import { fetchVocabulariesByCategoryIds } from "@/lib/vocabulary";
 import { highlightGrammarInSentence } from "@/common/utils";
+import { useTTS } from "@/hooks/use-tts";
 
 interface Word {
   id: number;
@@ -37,6 +38,7 @@ interface Category {
 
 export default function ListenChoosePage({ params }: { params?: any }) {
   // 1. TẤT CẢ HOOK Ở ĐẦU FILE
+  const { speak } = useTTS();
   const [questions, setQuestions] = useState<any[]>([]);
   const [current, setCurrent] = useState(0);
   const [selected, setSelected] = useState<number | null>(null);
@@ -60,7 +62,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
     async function fetchCategories() {
       try {
         const data: any = await fetchShortCategories();
-        setCategories(data.items || []);
+        setCategories(data || []);
       } catch (err) {
         setCategories([]);
       }
@@ -123,21 +125,7 @@ export default function ListenChoosePage({ params }: { params?: any }) {
   };
 
   const handleSpeak = async (text: string) => {
-    try {
-      const res = await fetch("/api/tts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
-      });
-      if (!res.ok) throw new Error("Không thể gọi API server");
-      const arrayBuffer = await res.arrayBuffer();
-      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
-      const url = URL.createObjectURL(blob);
-      const audio = new Audio(url);
-      audio.play();
-    } catch (err: any) {
-      alert("Không phát được âm thanh: " + err.message);
-    }
+    speak(text);
   };
 
   const handleSelect = (idx: number) => {
@@ -419,7 +407,9 @@ export default function ListenChoosePage({ params }: { params?: any }) {
                   disabled={showResult}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-lg">{opt.kanji}</span>
+                    <span className="font-medium text-lg japanese-text">
+                      {opt.kanji}
+                    </span>
                     {showResult && opt.id === q.answer.id && (
                       <CheckCircle className="h-5 w-5 text-green-600" />
                     )}
@@ -439,12 +429,12 @@ export default function ListenChoosePage({ params }: { params?: any }) {
               <div className="text-lg font-semibold text-primary-700 mb-2">
                 Câu ví dụ:
               </div>
-              <div className="text-xl font-bold text-gray-900 mb-2">
+              <div className="text-xl font-bold text-gray-900 mb-2 japanese-text">
                 {highlightGrammarInSentence(
                   q.example.replace(q.answer.kanji, `*${q.answer.kanji}*`)
                 )}
               </div>
-              <div className="text-base text-primary-600 font-semibold mb-2">
+              <div className="text-base text-primary-600 font-semibold mb-2 japanese-text">
                 {q.answer.kanji} - {q.answer.hiragana} - {q.answer.definition}
               </div>
               <div className="text-base text-gray-500 italic mb-2">

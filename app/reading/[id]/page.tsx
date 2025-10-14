@@ -313,18 +313,26 @@ export default function ReadingDetailPage() {
                   <CardContent>
                     <JapaneseTextTooltip
                       vocabulary={
-                        reading.vocabulary?.map((v) => ({
+                        reading.vocabulary?.map((v, index) => ({
+                          id: `reading-vocab-${index}`,
                           word: v.word,
-                          hiragana: v.reading,
-                          definition: v.meaning,
-                          example: v.example,
+                          reading: v.reading,
+                          meanings: [
+                            {
+                              meaning: v.meaning,
+                              example: v.example || "",
+                              translation: "",
+                            },
+                          ],
+                          type: "noun",
+                          level: reading.level,
                         })) || []
                       }
                       onAddVocabulary={handleAddVocabulary}
                       className="cursor-text select-text"
                     >
                       <div
-                        className="text-lg leading-relaxed p-6 bg-gray-50 rounded-lg border"
+                        className="text-lg leading-relaxed p-6 bg-gray-50 rounded-lg border japanese-text"
                         style={{
                           fontFamily:
                             "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -384,13 +392,7 @@ export default function ReadingDetailPage() {
                     <div className="space-y-6">
                       {reading.readingQuestions.map((question, qIndex) => (
                         <div key={qIndex} className="p-4 border rounded-lg">
-                          <h3
-                            className="font-medium mb-4 text-gray-900"
-                            style={{
-                              fontFamily:
-                                "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
-                            }}
-                          >
+                          <h3 className="font-medium mb-4 text-gray-900 japanese-text">
                             {qIndex + 1}. {question.question}
                           </h3>
                           <RadioGroup
@@ -412,7 +414,7 @@ export default function ReadingDetailPage() {
                                 />
                                 <Label
                                   htmlFor={`q${qIndex}-o${oIndex}`}
-                                  className={`flex-1 p-3 rounded-lg border cursor-pointer transition-colors ${
+                                  className={`flex-1 p-3 rounded-lg border cursor-pointer  japanese-text transition-colors ${
                                     submitted
                                       ? oIndex === question.correctAnswer
                                         ? "bg-green-50 border-green-200 text-green-800"
@@ -422,10 +424,6 @@ export default function ReadingDetailPage() {
                                         : "bg-gray-50"
                                       : "hover:bg-gray-50"
                                   }`}
-                                  style={{
-                                    fontFamily:
-                                      "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
-                                  }}
                                 >
                                   {oIndex === question.correctAnswer &&
                                     submitted && (
@@ -540,7 +538,7 @@ export default function ReadingDetailPage() {
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
                                 <span
-                                  className="text-xl font-bold text-gray-900"
+                                  className="text-xl font-bold text-gray-900 japanese-text"
                                   style={{
                                     fontFamily:
                                       "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -550,7 +548,7 @@ export default function ReadingDetailPage() {
                                 </span>
                               </div>
                               <div
-                                className="text-sm text-rose-600 bg-rose-50 px-2 py-1 rounded inline-block"
+                                className="text-sm text-rose-600 bg-rose-50 px-2 py-1 rounded inline-block japanese-text"
                                 style={{
                                   fontFamily:
                                     "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -574,7 +572,7 @@ export default function ReadingDetailPage() {
                                   Ví dụ:
                                 </p>
                                 <p
-                                  className="text-gray-800"
+                                  className="text-gray-800 japanese-text"
                                   style={{
                                     fontFamily:
                                       "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -708,7 +706,7 @@ export default function ReadingDetailPage() {
                         >
                           <div className="mb-3">
                             <div
-                              className="text-xl font-bold text-gray-900 bg-yellow-50 px-3 py-2 rounded inline-block"
+                              className="text-xl font-bold text-gray-900 bg-yellow-50 px-3 py-2 rounded inline-block japanese-text"
                               style={{
                                 fontFamily:
                                   "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",
@@ -727,7 +725,7 @@ export default function ReadingDetailPage() {
                                 Ví dụ:
                               </p>
                               <p
-                                className="text-gray-800"
+                                className="text-gray-800 japanese-text"
                                 style={{
                                   fontFamily:
                                     "'Noto Sans JP', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', 'Meiryo', sans-serif",

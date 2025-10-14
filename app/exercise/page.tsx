@@ -107,7 +107,7 @@ export default function ExercisePage() {
             : undefined
         }
         actions={
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center justify-center space-x-2">
             {questions.length > 0 && (
               <Button
                 onClick={handleClear}
@@ -133,7 +133,7 @@ export default function ExercisePage() {
       />
 
       {/* Filter Form */}
-      <div className="px-6 pb-6">
+      <div className="px-6 pb-6 flex items-center justify-center">
         <form
           onSubmit={handleSubmit}
           className="w-full max-w-7xl bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mt-2"
@@ -271,7 +271,7 @@ export default function ExercisePage() {
                       className="border-b border-gray-100 pb-8 last:border-b-0 last:pb-0"
                     >
                       <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-900 flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
+                        <h3 className="text-xl japanese-text font-semibold text-gray-900 flex flex-col md:flex-row md:items-center gap-1 md:gap-2">
                           <span className="text-rose-400 font-bold">
                             Câu {idx + 1}:
                           </span>

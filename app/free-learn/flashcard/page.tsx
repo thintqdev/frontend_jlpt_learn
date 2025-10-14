@@ -252,7 +252,7 @@ export default function FreeLearnFlashcardPage() {
                   <CardContent className="h-full flex flex-col justify-center p-6 bg-white ">
                     <div className="space-y-6">
                       <div className="text-center">
-                        <div className="text-xl japanese-text text-primary-600 font-bold mb-2">
+                        <div className="text-3xl japanese-text text-primary-600 font-bold mb-2">
                           {currentWord.word}
                         </div>
                         <div className="text-2xl font-bold text-gray-900 mb-4">

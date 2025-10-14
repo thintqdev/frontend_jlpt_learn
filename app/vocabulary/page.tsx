@@ -19,7 +19,6 @@ export default function VocabularyListPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("Tất cả");
   const [sortBy, setSortBy] = useState("name"); // name, level, wordCount
-  const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
 
   const pageSize = 8;
@@ -244,10 +243,6 @@ export default function VocabularyListPage() {
                       <div className="flex items-center">
                         <BookOpen className="mr-1 h-4 w-4" />
                         {category.wordCount || 20}+ từ vựng
-                      </div>
-                      <div className="flex items-center">
-                        <Users className="mr-1 h-4 w-4" />
-                        {Math.floor(Math.random() * 2000) + 500} học viên
                       </div>
                       <div className="flex items-center">
                         <Star className="mr-1 h-4 w-4 text-yellow-500 fill-current" />
