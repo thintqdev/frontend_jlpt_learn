@@ -21,6 +21,7 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import {
   getGrammars,
@@ -33,10 +34,12 @@ import {
   importGrammarJson,
   importGrammarCsv,
   removeGrammarUsage,
+  generateGrammar,
 } from "@/lib/grammar";
 import React from "react";
 import { renderExample } from "../../../common/utils";
 import AdminNav from "@/components/admin-nav";
+import { toast } from "sonner";
 
 interface Example {
   id: number;
@@ -113,6 +116,12 @@ export default function GrammarAdminPage() {
   const [csvFile, setCSVFile] = useState<File | null>(null);
   const [isImportingCSV, setIsImportingCSV] = useState(false);
 
+  // AI Generate
+  const [isGenerating, setIsGenerating] = useState(false);
+  // AI Generate usages
+  const [isGeneratingUsages, setIsGeneratingUsages] = useState(false);
+  const [generatedUsages, setGeneratedUsages] = useState<any[]>([]);
+
   // Lấy danh sách ngữ pháp từ API khi load trang hoặc chuyển trang
   useEffect(() => {
     loadGrammars(grammarPage);
@@ -146,7 +155,7 @@ export default function GrammarAdminPage() {
         Math.max(1, Math.ceil((count || 0) / GRAMMAR_PAGE_SIZE))
       );
     } catch (e) {
-      alert("Không thể tải danh sách ngữ pháp");
+      toast.error("Không thể tải danh sách ngữ pháp");
     } finally {
       setLoading(false);
     }
@@ -175,7 +184,7 @@ export default function GrammarAdminPage() {
 
   const handleAddGrammar = async () => {
     if (!newGrammar.title) {
-      alert("Vui lòng nhập tên điểm ngữ pháp");
+      toast.error("Vui lòng nhập tên điểm ngữ pháp");
       return;
     }
     setIsAddingGrammar(true);
@@ -186,8 +195,11 @@ export default function GrammarAdminPage() {
         definition: newGrammar.definition,
         description: newGrammar.description,
       } as any);
-      // Reload trang hiện tại
-      loadGrammars(grammarPage);
+
+      // Refresh lại danh sách ngữ pháp từ server
+      await loadGrammars(grammarPage);
+
+      // Reset form
       setNewGrammar({
         title: "",
         level: "N5",
@@ -195,8 +207,10 @@ export default function GrammarAdminPage() {
         description: "",
       });
       setShowAddGrammar(false);
+
+      toast.success("Đã thêm điểm ngữ pháp thành công!");
     } catch (e: any) {
-      alert("Thêm điểm ngữ pháp thất bại");
+      toast.error("Thêm điểm ngữ pháp thất bại");
     } finally {
       setIsAddingGrammar(false);
     }
@@ -205,7 +219,7 @@ export default function GrammarAdminPage() {
   // ----------- Export JSON -----------
   const handleExportJSON = () => {
     if (grammarList.length === 0) {
-      alert("Không có dữ liệu để export");
+      toast.error("Không có dữ liệu để export");
       return;
     }
 
@@ -242,7 +256,7 @@ export default function GrammarAdminPage() {
   // ----------- Import JSON -----------
   const handleImportJSON = async () => {
     if (!importText.trim()) {
-      alert("Vui lòng nhập dữ liệu JSON");
+      toast.error("Vui lòng nhập dữ liệu JSON");
       return;
     }
     setIsImporting(true);
@@ -251,14 +265,14 @@ export default function GrammarAdminPage() {
       const ok = await importGrammarJson(importText);
       if (ok) {
         await loadGrammars(grammarPage);
-        alert("Đã import ngữ pháp thành công từ JSON!");
+        toast.success("Đã import ngữ pháp thành công từ JSON!");
         setShowImportModal(false);
         setImportText("");
       } else {
-        alert("Import JSON thất bại!");
+        toast.error("Import JSON thất bại!");
       }
     } catch (error: any) {
-      alert(`Lỗi import: ${error.message}`);
+      toast.error(`Lỗi import: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -267,7 +281,7 @@ export default function GrammarAdminPage() {
   // ----------- Import CSV -----------
   const handleImportCSV = async () => {
     if (!csvFile) {
-      alert("Vui lòng chọn file CSV");
+      toast.error("Vui lòng chọn file CSV");
       return;
     }
     setIsImportingCSV(true);
@@ -276,16 +290,74 @@ export default function GrammarAdminPage() {
       const ok = await importGrammarCsv(csvFile);
       if (ok) {
         await loadGrammars(grammarPage);
-        alert("Đã import ngữ pháp thành công từ CSV!");
+        toast.success("Đã import ngữ pháp thành công từ CSV!");
         setShowImportCSVModal(false);
         setCSVFile(null);
       } else {
-        alert("Import CSV thất bại!");
+        toast.error("Import CSV thất bại!");
       }
     } catch (error: any) {
-      alert(`Lỗi import CSV: ${error.message}`);
+      toast.error(`Lỗi import CSV: ${error.message}`);
     } finally {
       setIsImportingCSV(false);
+    }
+  };
+
+  // ----------- Generate AI -----------
+  const handleGenerateGrammar = async () => {
+    if (!newGrammar.title.trim()) {
+      toast.error("Vui lòng nhập tên điểm ngữ pháp");
+      return;
+    }
+    setIsGenerating(true);
+    try {
+      const generatedData = await generateGrammar(
+        newGrammar.title,
+        newGrammar.level
+      );
+
+      // Fill data vào form để user kiểm tra và lưu thủ công
+      setNewGrammar({
+        title: generatedData.title,
+        level: generatedData.level,
+        definition: generatedData.definition,
+        description: generatedData.description,
+      });
+
+      toast.success("Đã tạo nội dung với AI! Hãy kiểm tra và lưu thủ công.");
+    } catch (error: any) {
+      toast.error(`Lỗi generate: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  }; // ----------- Generate Usages AI -----------
+  const handleGenerateUsages = async () => {
+    if (!selectedGrammar) return;
+
+    setIsGeneratingUsages(true);
+    try {
+      // Gọi API generate grammar để lấy usages và examples
+      const generatedData = await generateGrammar(
+        selectedGrammar.title,
+        selectedGrammar.level
+      );
+
+      // Lưu generated usages vào state để hiển thị trong form
+      setGeneratedUsages(generatedData.usages || []);
+
+      // Mở form thêm usage để user có thể xem và chỉnh sửa
+      setShowAddUsage(true);
+      setEditingUsageId(null);
+
+      toast.success(
+        `Đã generate ${generatedData.usages?.length || 0} cách dùng cho "${
+          selectedGrammar.title
+        }"! Hãy kiểm tra và lưu thủ công.`
+      );
+    } catch (error: any) {
+      toast.error(`Lỗi generate usages: ${error.message}`);
+    } finally {
+      setIsGeneratingUsages(false);
     }
   };
 
@@ -297,13 +369,13 @@ export default function GrammarAdminPage() {
       loadGrammars(grammarPage);
       if (selectedGrammarId === id) setSelectedGrammarId(null);
     } catch (e) {
-      alert("Xoá điểm ngữ pháp thất bại");
+      toast.error("Xoá điểm ngữ pháp thất bại");
     }
   };
 
   const handleSaveUsage = async () => {
     if (!usageForm.structure || !usageForm.meaning) {
-      alert("Vui lòng nhập cấu trúc và ý nghĩa cho cách dùng");
+      toast.error("Vui lòng nhập cấu trúc và ý nghĩa cho cách dùng");
       return;
     }
     setIsAddingUsage(true);
@@ -338,7 +410,7 @@ export default function GrammarAdminPage() {
       setShowAddUsage(false);
       setEditingUsageId(null);
     } catch (e) {
-      alert("Thêm cách dùng thất bại");
+      toast.error("Thêm cách dùng thất bại");
     } finally {
       setIsAddingUsage(false);
     }
@@ -370,7 +442,7 @@ export default function GrammarAdminPage() {
         )
       );
     } catch (e) {
-      alert("Xoá cách dùng thất bại");
+      toast.error("Xoá cách dùng thất bại");
     } finally {
       setLoading(false);
     }
@@ -378,7 +450,7 @@ export default function GrammarAdminPage() {
 
   const handleSaveExample = async (usageId: number) => {
     if (!exampleForm.sentence || !exampleForm.translation) {
-      alert("Vui lòng nhập câu ví dụ và dịch nghĩa");
+      toast.error("Vui lòng nhập câu ví dụ và dịch nghĩa");
       return;
     }
     setIsAddingExample(true);
@@ -409,7 +481,7 @@ export default function GrammarAdminPage() {
       setShowAddExampleUsageId(null);
       setEditingExample(null);
     } catch {
-      alert("Thêm ví dụ thất bại");
+      toast.error("Thêm ví dụ thất bại");
     } finally {
       setIsAddingExample(false);
     }
@@ -438,7 +510,7 @@ export default function GrammarAdminPage() {
         )
       );
     } catch {
-      alert("Xoá ví dụ thất bại");
+      toast.error("Xoá ví dụ thất bại");
     }
   };
 
@@ -538,7 +610,7 @@ export default function GrammarAdminPage() {
                   <CardDescription>Quản lý các điểm ngữ pháp</CardDescription>
                 </div>
                 <Button onClick={() => setShowAddGrammar(true)} size="sm">
-                  <Plus className="h-4 w-4 mr-2" /> Thêm điểm ngữ pháp
+                  <Plus className="h-4 w-4 mr-2" /> Thêm
                 </Button>
               </div>
             </CardHeader>
@@ -546,6 +618,34 @@ export default function GrammarAdminPage() {
               {showAddGrammar && (
                 <div className="mb-4 p-4 border rounded-lg bg-gray-50 flex-shrink-0">
                   <h3 className="font-medium mb-3">Thêm điểm ngữ pháp mới</h3>
+
+                  {/* Button tạo với AI ở trên cùng */}
+                  <div className="mb-4">
+                    <p className="text-sm text-gray-600 mb-3">
+                      💡 <strong>Tip:</strong> Nhập tên điểm ngữ pháp và chọn
+                      level, sau đó bấm <strong>"Tạo với AI"</strong> để AI tạo
+                      nội dung. Bạn có thể chỉnh sửa trước khi lưu!
+                    </p>
+                    <div className="flex gap-2 mb-4">
+                      <Button
+                        onClick={handleGenerateGrammar}
+                        size="sm"
+                        disabled={isGenerating}
+                        variant="outline"
+                        className="border-pink-500 text-pink-600 hover:bg-pink-50"
+                      >
+                        {isGenerating ? (
+                          <span className="animate-spin mr-2">
+                            <Sparkles className="h-4 w-4" />
+                          </span>
+                        ) : (
+                          <Sparkles className="h-4 w-4 mr-2" />
+                        )}
+                        {isGenerating ? "Đang tạo..." : "Tạo với AI"}
+                      </Button>
+                    </div>
+                  </div>
+
                   <div className="space-y-3 max-h-screen overflow-y-auto">
                     <Input
                       placeholder="Tên điểm ngữ pháp (ví dụ: 〜ている)"
@@ -662,114 +762,313 @@ export default function GrammarAdminPage() {
           {/* Chi tiết điểm ngữ pháp, các cách dùng và ví dụ */}
           <Card className="flex flex-col">
             <CardHeader className="flex-shrink-0">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>
-                    {selectedGrammar
-                      ? `Ngữ pháp: ${selectedGrammar.title}`
-                      : "Chi tiết điểm ngữ pháp"}
-                  </CardTitle>
-                  <CardDescription>
-                    {selectedGrammar
-                      ? "Quản lý các cách dùng và ví dụ minh hoạ"
-                      : "Chọn điểm ngữ pháp để xem chi tiết"}
-                  </CardDescription>
-                </div>
-                {selectedGrammar && (
-                  <Button
-                    onClick={() => {
-                      setShowAddUsage(true);
-                      setEditingUsageId(null);
-                      setUsageForm({ structure: "", meaning: "", note: "" });
-                    }}
-                    size="sm"
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Thêm cách dùng
-                  </Button>
-                )}
+              <div>
+                <CardTitle>
+                  {selectedGrammar
+                    ? `Ngữ pháp: ${selectedGrammar.title}`
+                    : "Chi tiết điểm ngữ pháp"}
+                </CardTitle>
+                <CardDescription>
+                  {selectedGrammar
+                    ? "Quản lý các cách dùng và ví dụ minh hoạ"
+                    : "Chọn điểm ngữ pháp để xem chi tiết"}
+                </CardDescription>
               </div>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto">
               {selectedGrammar ? (
                 <>
+                  {/* Thông tin chi tiết điểm ngữ pháp */}
+                  <div className="mb-6 p-4 border-2 border-red-300 rounded-lg bg-red-50">
+                    <h3 className="font-semibold text-red-800 mb-3 flex items-center">
+                      <span className="w-2 h-2 bg-red-500 rounded-full mr-2"></span>
+                      Thông tin điểm ngữ pháp
+                    </h3>
+                    <div className="space-y-2">
+                      <div className="flex items-center">
+                        <span className="font-medium text-red-700 w-20">
+                          Tên:
+                        </span>
+                        <span className="text-red-900">
+                          {selectedGrammar.title}
+                        </span>
+                      </div>
+                      <div className="flex items-center">
+                        <span className="font-medium text-red-700 w-20">
+                          Level:
+                        </span>
+                        <span className="px-2 py-1 bg-red-200 text-red-800 rounded text-sm font-medium">
+                          {selectedGrammar.level}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Buttons điều khiển */}
+                  <div className="mb-6 flex gap-3 flex-wrap">
+                    <Button
+                      onClick={handleGenerateUsages}
+                      disabled={isGeneratingUsages}
+                      variant="outline"
+                      className="border-pink-500 text-pink-600 hover:bg-pink-50"
+                    >
+                      {isGeneratingUsages ? (
+                        <span className="animate-spin mr-2">
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      {isGeneratingUsages
+                        ? "Đang tạo..."
+                        : "Tạo cách dùng với AI"}
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setShowAddUsage(true);
+                        setEditingUsageId(null);
+                        setUsageForm({ structure: "", meaning: "", note: "" });
+                      }}
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Thêm cách dùng
+                    </Button>
+                  </div>
                   {/* Thêm/sửa usage */}
                   {showAddUsage && (
                     <div className="mb-4 p-4 border rounded-lg bg-gray-50 flex-shrink-0">
                       <h3 className="font-medium mb-3">
                         {editingUsageId
                           ? "Sửa cách dùng"
+                          : generatedUsages.length > 0
+                          ? `Cách dùng được tạo với AI (${generatedUsages.length})`
                           : "Thêm cách dùng mới"}
                       </h3>
-                      <div className="space-y-3">
-                        <Input
-                          placeholder="Cấu trúc (ví dụ: Vている)"
-                          value={usageForm.structure}
-                          onChange={(e) =>
-                            setUsageForm({
-                              ...usageForm,
-                              structure: e.target.value,
-                            })
-                          }
-                        />
-                        <Input
-                          placeholder="Ý nghĩa (ví dụ: Đang ... )"
-                          value={usageForm.meaning}
-                          onChange={(e) =>
-                            setUsageForm({
-                              ...usageForm,
-                              meaning: e.target.value,
-                            })
-                          }
-                        />
-                        <Input
-                          placeholder="Ghi chú (không bắt buộc)"
-                          value={usageForm.note}
-                          onChange={(e) =>
-                            setUsageForm({ ...usageForm, note: e.target.value })
-                          }
-                        />
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={handleSaveUsage}
-                            size="sm"
-                            disabled={isAddingUsage}
-                          >
-                            {isAddingUsage ? (
-                              <span className="animate-spin mr-2">
-                                <Save className="h-4 w-4" />
-                              </span>
-                            ) : (
-                              <Save className="h-4 w-4 mr-2" />
-                            )}
-                            {isAddingUsage ? "Đang lưu..." : "Lưu"}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            onClick={() => {
-                              setShowAddUsage(false);
-                              setEditingUsageId(null);
-                              setUsageForm({
-                                structure: "",
-                                meaning: "",
-                                note: "",
-                              });
-                            }}
-                            size="sm"
-                          >
-                            <X className="h-4 w-4 mr-2" /> Huỷ
-                          </Button>
+
+                      {generatedUsages.length > 0 ? (
+                        // Hiển thị tất cả generated usages để user kiểm tra và lưu
+                        <div className="space-y-4">
+                          {generatedUsages.map((usage, index) => (
+                            <div
+                              key={index}
+                              className="p-3 border rounded bg-white"
+                            >
+                              <h4 className="font-medium text-sm mb-2">
+                                Cách dùng {index + 1}
+                              </h4>
+                              <div className="space-y-2">
+                                <Input
+                                  placeholder="Cấu trúc"
+                                  value={usage.structure || ""}
+                                  onChange={(e) => {
+                                    const newUsages = [...generatedUsages];
+                                    newUsages[index].structure = e.target.value;
+                                    setGeneratedUsages(newUsages);
+                                  }}
+                                />
+                                <Input
+                                  placeholder="Ý nghĩa"
+                                  value={usage.meaning || ""}
+                                  onChange={(e) => {
+                                    const newUsages = [...generatedUsages];
+                                    newUsages[index].meaning = e.target.value;
+                                    setGeneratedUsages(newUsages);
+                                  }}
+                                />
+                                <Input
+                                  placeholder="Ghi chú (không bắt buộc)"
+                                  value={usage.note || ""}
+                                  onChange={(e) => {
+                                    const newUsages = [...generatedUsages];
+                                    newUsages[index].note = e.target.value;
+                                    setGeneratedUsages(newUsages);
+                                  }}
+                                />
+
+                                {/* Hiển thị examples */}
+                                <div className="mt-3">
+                                  <h5 className="text-sm font-medium mb-2">
+                                    Ví dụ:
+                                  </h5>
+                                  <div className="space-y-2">
+                                    {usage.examples?.map(
+                                      (example: any, exIndex: number) => (
+                                        <div
+                                          key={exIndex}
+                                          className="p-2 bg-gray-50 rounded text-sm"
+                                        >
+                                          <div className="font-medium">
+                                            {example.sentence}
+                                          </div>
+                                          <div className="text-gray-600">
+                                            {example.translation}
+                                          </div>
+                                        </div>
+                                      )
+                                    ) || (
+                                      <div className="text-gray-500 text-sm">
+                                        Không có ví dụ
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+
+                          <div className="flex gap-2 mt-4">
+                            <Button
+                              onClick={async () => {
+                                setIsAddingUsage(true);
+                                try {
+                                  // Lưu tất cả generated usages
+                                  for (const usage of generatedUsages) {
+                                    const createdUsage =
+                                      await createGrammarUsage({
+                                        grammarId: selectedGrammarId!,
+                                        structure: usage.structure || "",
+                                        meaning: usage.meaning || "",
+                                        note: usage.note || "",
+                                      });
+
+                                    // Lưu examples cho usage này
+                                    for (const example of usage.examples ||
+                                      []) {
+                                      await createGrammarExample({
+                                        usageId: createdUsage.id,
+                                        sentence: example.sentence,
+                                        translation: example.translation,
+                                      });
+                                    }
+                                  }
+
+                                  // Reload data
+                                  await loadExamplesForGrammar(
+                                    selectedGrammarId!
+                                  );
+
+                                  // Reset form
+                                  setGeneratedUsages([]);
+                                  setShowAddUsage(false);
+
+                                  toast.success(
+                                    `Đã lưu thành công ${generatedUsages.length} cách dùng!`
+                                  );
+                                } catch (error: any) {
+                                  toast.error(
+                                    `Lỗi lưu cách dùng: ${error.message}`
+                                  );
+                                } finally {
+                                  setIsAddingUsage(false);
+                                }
+                              }}
+                              size="sm"
+                              disabled={isAddingUsage}
+                            >
+                              {isAddingUsage ? (
+                                <span className="animate-spin mr-2">
+                                  <Save className="h-4 w-4" />
+                                </span>
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              {isAddingUsage
+                                ? "Đang lưu..."
+                                : `Lưu tất cả (${generatedUsages.length})`}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setGeneratedUsages([]);
+                                setShowAddUsage(false);
+                                setEditingUsageId(null);
+                                setUsageForm({
+                                  structure: "",
+                                  meaning: "",
+                                  note: "",
+                                });
+                              }}
+                              size="sm"
+                            >
+                              <X className="h-4 w-4 mr-2" /> Huỷ
+                            </Button>
+                          </div>
                         </div>
-                      </div>
+                      ) : (
+                        // Form thêm usage thông thường
+                        <div className="space-y-3">
+                          <Input
+                            placeholder="Cấu trúc (ví dụ: Vている)"
+                            value={usageForm.structure}
+                            onChange={(e) =>
+                              setUsageForm({
+                                ...usageForm,
+                                structure: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            placeholder="Ý nghĩa (ví dụ: Đang ... )"
+                            value={usageForm.meaning}
+                            onChange={(e) =>
+                              setUsageForm({
+                                ...usageForm,
+                                meaning: e.target.value,
+                              })
+                            }
+                          />
+                          <Input
+                            placeholder="Ghi chú (không bắt buộc)"
+                            value={usageForm.note}
+                            onChange={(e) =>
+                              setUsageForm({
+                                ...usageForm,
+                                note: e.target.value,
+                              })
+                            }
+                          />
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={handleSaveUsage}
+                              size="sm"
+                              disabled={isAddingUsage}
+                            >
+                              {isAddingUsage ? (
+                                <span className="animate-spin mr-2">
+                                  <Save className="h-4 w-4" />
+                                </span>
+                              ) : (
+                                <Save className="h-4 w-4 mr-2" />
+                              )}
+                              {isAddingUsage ? "Đang lưu..." : "Lưu"}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              onClick={() => {
+                                setShowAddUsage(false);
+                                setEditingUsageId(null);
+                                setUsageForm({
+                                  structure: "",
+                                  meaning: "",
+                                  note: "",
+                                });
+                              }}
+                              size="sm"
+                            >
+                              <X className="h-4 w-4 mr-2" /> Huỷ
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   {/* Danh sách usage */}
                   <div className="space-y-6">
-                    {selectedGrammar.usages.length === 0 && (
+                    {selectedGrammar?.usages?.length === 0 && (
                       <div className="text-gray-500 text-sm">
                         Chưa có cách dùng nào cho điểm ngữ pháp này.
                       </div>
                     )}
-                    {selectedGrammar.usages.map((u, idx) => (
+                    {selectedGrammar?.usages?.map((u, idx) => (
                       <div
                         key={u.id}
                         className="p-4 border rounded-lg bg-yellow-50"
@@ -898,12 +1197,12 @@ export default function GrammarAdminPage() {
                             </div>
                           )}
                           <div className="space-y-2">
-                            {u.examples.length === 0 && (
+                            {u.examples?.length === 0 && (
                               <div className="text-gray-500 text-xs">
                                 Chưa có ví dụ nào.
                               </div>
                             )}
-                            {u.examples.map((ex, exIdx) => (
+                            {u.examples?.map((ex, exIdx) => (
                               <div
                                 key={ex.id}
                                 className="p-2 border rounded bg-white flex items-start justify-between"
@@ -948,6 +1247,7 @@ export default function GrammarAdminPage() {
             </CardContent>
           </Card>
         </div>
+
         {/* Import JSON Modal */}
         {showImportModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">

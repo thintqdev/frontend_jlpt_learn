@@ -1,11 +1,15 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+if (!API_URL) {
+  console.warn("NEXT_PUBLIC_API_URL is not set!");
+}
+
 export async function getGrammars(
   page: number = 1,
   pageSize: number = 10,
   search: string = "",
   sortBy: string = "id",
-  sortOrder: "asc" | "desc" = "asc",
+  sortOrder: "asc" | "desc" = "desc",
   levelFilter?: string[],
   typeFilter?: string[]
 ) {
@@ -72,6 +76,7 @@ export async function getGrammars(
 export async function createGrammar(input: {
   title: string;
   level: string;
+  definition: string;
   description?: string;
 }) {
   const query = `
@@ -90,7 +95,22 @@ export async function createGrammar(input: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ query, variables }),
   });
+
+  if (!res.ok) {
+    throw new Error(`HTTP error! status: ${res.status}`);
+  }
+
   const json = await res.json();
+  console.log("createGrammar response:", json);
+
+  if (json.errors) {
+    throw new Error(`GraphQL errors: ${JSON.stringify(json.errors)}`);
+  }
+
+  if (!json.data || !json.data.createGrammar) {
+    throw new Error("Invalid response from createGrammar");
+  }
+
   return json.data.createGrammar;
 }
 
@@ -343,4 +363,30 @@ export async function importGrammarCsv(file: File): Promise<boolean> {
   const json = await res.json();
   // Note: the mutation returns just a boolean
   return json.data.importGrammarCsv;
+}
+
+/**
+ * Generate grammar content using AI
+ * @param title Grammar point title
+ * @param level JLPT level
+ * Returns: Generated grammar data
+ */
+export async function generateGrammar(title: string, level: string) {
+  const res = await fetch("/api/generate-grammar", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, level }),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to generate grammar");
+  }
+
+  const json = await res.json();
+
+  if (!json.success) {
+    throw new Error(json.error || "Failed to generate grammar");
+  }
+
+  return json.data;
 }
