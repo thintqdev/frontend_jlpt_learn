@@ -13,6 +13,7 @@ import {
   BookAudio,
   MessageCircle,
   BookCheck,
+  Bookmark,
 } from "lucide-react";
 
 export default function BottomNavigation() {
@@ -66,6 +67,12 @@ export default function BottomNavigation() {
       icon: BookCheck,
       label: "Đọc hiểu",
       active: pathname.startsWith("/reading"),
+    },
+    {
+      href: "/blogs",
+      icon: Bookmark,
+      label: "Phụ lục",
+      active: pathname.startsWith("/blogs"),
     },
     // {
     //   href: "/profile",
