@@ -22,17 +22,20 @@ import {
   Search,
   ChevronDown,
   ChevronUp,
+  Sparkles,
 } from "lucide-react";
 import {
   fetchConversations,
   createConversation,
   updateConversation,
   deleteConversation,
-  createConversationJson, // <-- Thêm import này!
+  createConversationJson,
+  generateKaiwa,
   Conversation,
   CreateConversationInput,
 } from "@/lib/conversation";
 import AdminNav from "@/components/admin-nav";
+import { toast } from "sonner";
 
 interface ConversationLine {
   id: number;
@@ -77,6 +80,10 @@ export default function KaiwaAdminPage() {
   const [showImportModal, setShowImportModal] = useState(false);
   const [importText, setImportText] = useState("");
   const [isImporting, setIsImporting] = useState(false);
+  const [isGeneratingKaiwa, setIsGeneratingKaiwa] = useState(false);
+  const [generatedPreview, setGeneratedPreview] = useState<ConversationLine[]>(
+    []
+  );
 
   // Search & sort
   const [searchInput, setSearchInput] = useState("");
@@ -103,7 +110,7 @@ export default function KaiwaAdminPage() {
         );
       } catch (error) {
         console.error("Error fetching conversations:", error);
-        alert("Lỗi khi tải danh sách hội thoại");
+        toast.error("Lỗi khi tải danh sách hội thoại");
       } finally {
         setLoading(false);
       }
@@ -111,43 +118,8 @@ export default function KaiwaAdminPage() {
     loadConversations();
   }, [search, sort]);
 
-  // Thêm kaiwa mới
-  const handleAddKaiwa = async () => {
-    if (!newKaiwa.title || !newKaiwa.category) {
-      alert("Vui lòng nhập tên bài hội thoại và danh mục");
-      return;
-    }
-    setIsAddingKaiwa(true);
-
-    try {
-      const input: CreateConversationInput = {
-        ...newKaiwa,
-        duration: newKaiwa.duration || "5 phút",
-        conversation: [],
-      };
-      const newConversation = await createConversation(input);
-      setKaiwaList([
-        ...kaiwaList,
-        {
-          id: newConversation.id,
-          title: newConversation.title,
-          level: newConversation.level,
-          category: newConversation.category,
-          duration: newConversation.duration ?? "5 phút",
-          conversation: Array.isArray(newConversation.conversation)
-            ? newConversation.conversation
-            : [],
-        },
-      ]);
-      setNewKaiwa({ title: "", level: "N5", category: "", duration: "" });
-      setShowAddKaiwa(false);
-    } catch (error) {
-      console.error("Error adding kaiwa:", error);
-      alert("Lỗi khi thêm bài hội thoại");
-    } finally {
-      setIsAddingKaiwa(false);
-    }
-  };
+  // Thêm kaiwa mới (deprecated - user import JSON thay vì add trực tiếp)
+  // const handleAddKaiwa = async () => { ... }
 
   // Xoá kaiwa
   const handleDeleteKaiwa = async (id: number) => {
@@ -156,16 +128,17 @@ export default function KaiwaAdminPage() {
       await deleteConversation(id);
       setKaiwaList(kaiwaList.filter((k) => k.id !== id));
       if (selectedKaiwaId === id) setSelectedKaiwaId(null);
+      toast.success("Đã xoá bài hội thoại thành công!");
     } catch (error) {
       console.error("Error deleting kaiwa:", error);
-      alert("Lỗi khi xoá bài hội thoại");
+      toast.error("Lỗi khi xoá bài hội thoại");
     }
   };
 
   // Thêm hoặc sửa conversation line
   const handleSaveConversation = async () => {
     if (!conversationForm.jp || !conversationForm.vi) {
-      alert("Vui lòng nhập câu tiếng Nhật và nghĩa tiếng Việt");
+      toast.error("Vui lòng nhập câu tiếng Nhật và nghĩa tiếng Việt");
       return;
     }
     setIsAddingConversation(true);
@@ -214,9 +187,10 @@ export default function KaiwaAdminPage() {
       setConversationForm({ speaker: "A", jp: "", romaji: "", vi: "" });
       setShowAddConversation(false);
       setEditingConversationId(null);
+      toast.success("Đã lưu dòng hội thoại thành công!");
     } catch (error) {
       console.error("Error saving conversation line:", error);
-      alert("Lỗi khi lưu dòng hội thoại");
+      toast.error("Lỗi khi lưu dòng hội thoại");
     } finally {
       setIsAddingConversation(false);
     }
@@ -249,16 +223,17 @@ export default function KaiwaAdminPage() {
             : k
         )
       );
+      toast.success("Đã xoá dòng hội thoại thành công!");
     } catch (error) {
       console.error("Error deleting conversation line:", error);
-      alert("Lỗi khi xoá dòng hội thoại");
+      toast.error("Lỗi khi xoá dòng hội thoại");
     }
   };
 
   // Import JSON kaiwa (sử dụng mutation createConversationJson cho import hàng loạt)
   const handleImportJSON = async () => {
     if (!importText.trim()) {
-      alert("Vui lòng nhập dữ liệu JSON");
+      toast.error("Vui lòng nhập dữ liệu JSON");
       return;
     }
 
@@ -308,10 +283,10 @@ export default function KaiwaAdminPage() {
 
       setImportText("");
       setShowImportModal(false);
-      alert(`Đã import thành công ${data.length} bài kaiwa!`);
+      toast.success(`Đã import thành công ${data.length} bài kaiwa!`);
     } catch (error: any) {
       console.error("Error importing JSON:", error);
-      alert(`Lỗi import: ${error.message}`);
+      toast.error(`Lỗi import: ${error.message}`);
     } finally {
       setIsImporting(false);
     }
@@ -320,7 +295,7 @@ export default function KaiwaAdminPage() {
   // Export JSON kaiwa
   const handleExportJSON = () => {
     if (kaiwaList.length === 0) {
-      alert("Không có dữ liệu để export");
+      toast.error("Không có dữ liệu để export");
       return;
     }
 
@@ -347,6 +322,59 @@ export default function KaiwaAdminPage() {
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Generate kaiwa với AI
+  const handleGenerateKaiwa = async () => {
+    if (!newKaiwa.title || !newKaiwa.category) {
+      toast.error("Vui lòng nhập tên bài hội thoại và danh mục trước");
+      return;
+    }
+
+    setIsGeneratingKaiwa(true);
+    try {
+      const generatedData = await generateKaiwa(
+        newKaiwa.title,
+        newKaiwa.level,
+        newKaiwa.category,
+        newKaiwa.duration
+      );
+
+      // Show generated conversation as JSON in textarea
+      const exportData = {
+        title: newKaiwa.title,
+        level: newKaiwa.level,
+        category: newKaiwa.category,
+        duration: newKaiwa.duration || "5 phút",
+        conversation: generatedData.conversation.map((line: any) => ({
+          speaker: line.speaker || "A",
+          jp: line.jp || "",
+          romaji: line.romaji || "",
+          vi: line.vi || "",
+        })),
+      };
+
+      const jsonString = JSON.stringify([exportData], null, 2);
+
+      // Show JSON in import textarea
+      setImportText(jsonString);
+      setShowImportModal(true);
+
+      // Reset form
+      setShowAddKaiwa(false);
+      setGeneratedPreview([]);
+      setNewKaiwa({ title: "", level: "N5", category: "", duration: "" });
+
+      toast.success(
+        `Đã generate ${
+          generatedData.lineCount || 0
+        } dòng hội thoại! JSON được hiển thị ở phần Import.`
+      );
+    } catch (error: any) {
+      toast.error(`Lỗi generate: ${error.message}`);
+    } finally {
+      setIsGeneratingKaiwa(false);
+    }
   };
 
   const selectedKaiwa = kaiwaList.find((k) => k.id === selectedKaiwaId);
@@ -474,7 +502,9 @@ export default function KaiwaAdminPage() {
               {showAddKaiwa && (
                 <div className="mb-4 p-4 border rounded-lg bg-gray-50">
                   <h3 className="font-medium mb-3">Thêm bài hội thoại mới</h3>
-                  <div className="space-y-3 max-h-screen overflow-y-auto">
+
+                  {/* Form input */}
+                  <div className="space-y-3 mb-4">
                     <Input
                       placeholder="Tên bài hội thoại (ví dụ: Đi mua sắm)"
                       value={newKaiwa.title}
@@ -509,29 +539,47 @@ export default function KaiwaAdminPage() {
                         setNewKaiwa({ ...newKaiwa, duration: e.target.value })
                       }
                     />
-                    <div className="flex gap-2">
-                      <Button
-                        onClick={handleAddKaiwa}
-                        size="sm"
-                        disabled={isAddingKaiwa}
-                      >
-                        {isAddingKaiwa ? (
-                          <span className="animate-spin mr-2">
-                            <Save className="h-4 w-4" />
-                          </span>
-                        ) : (
-                          <Save className="h-4 w-4 mr-2" />
-                        )}
-                        {isAddingKaiwa ? "Đang lưu..." : "Lưu"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowAddKaiwa(false)}
-                        size="sm"
-                      >
-                        <X className="h-4 w-4 mr-2" /> Huỷ
-                      </Button>
-                    </div>
+                  </div>
+
+                  {/* Button generate AI */}
+                  <div className="mb-4">
+                    <Button
+                      onClick={handleGenerateKaiwa}
+                      disabled={isGeneratingKaiwa}
+                      variant="outline"
+                      className="w-full border-pink-500 text-pink-600 hover:bg-pink-50"
+                    >
+                      {isGeneratingKaiwa ? (
+                        <span className="animate-spin mr-2">
+                          <Sparkles className="h-4 w-4" />
+                        </span>
+                      ) : (
+                        <Sparkles className="h-4 w-4 mr-2" />
+                      )}
+                      {isGeneratingKaiwa
+                        ? "Đang generate..."
+                        : "✨ Generate đoạn hội thoại với AI"}
+                    </Button>
+                  </div>
+
+                  {/* Cancel button */}
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setShowAddKaiwa(false);
+                        setNewKaiwa({
+                          title: "",
+                          level: "N5",
+                          category: "",
+                          duration: "",
+                        });
+                      }}
+                      size="sm"
+                      className="w-full"
+                    >
+                      <X className="h-4 w-4 mr-2" /> Huỷ
+                    </Button>
                   </div>
                 </div>
               )}

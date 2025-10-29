@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import AppLayout from "@/components/app-layout";
-import { Volume2, User, Play, RotateCcw } from "lucide-react";
+import { Volume2, User, Play, RotateCcw, Eye, EyeOff } from "lucide-react";
 import { getConversationById, Conversation } from "@/lib/conversation";
 import { useTTS } from "@/hooks/use-tts";
 
@@ -56,6 +56,7 @@ export default function KaiwaDetailPage() {
   const [showMeanings, setShowMeanings] = useState<{ [key: string]: boolean }>(
     {}
   );
+  const [showRomaji, setShowRomaji] = useState<boolean>(true);
   const [animateKey, setAnimateKey] = useState<number>(0);
 
   useEffect(() => {
@@ -170,15 +171,35 @@ export default function KaiwaDetailPage() {
         <h1 className="text-2xl font-bold text-gray-900 flex-1">
           {kaiwa.title}
         </h1>
-        <Badge
-          variant="secondary"
-          className={
-            LEVEL_COLOR[kaiwa.level] ||
-            "bg-gray-100 text-gray-700 border-gray-200"
-          }
-        >
-          {kaiwa.level}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowRomaji(!showRomaji)}
+            className="flex items-center gap-2"
+          >
+            {showRomaji ? (
+              <>
+                <EyeOff className="w-4 h-4" />
+                Ẩn Romaji
+              </>
+            ) : (
+              <>
+                <Eye className="w-4 h-4" />
+                Hiện Romaji
+              </>
+            )}
+          </Button>
+          <Badge
+            variant="secondary"
+            className={
+              LEVEL_COLOR[kaiwa.level] ||
+              "bg-gray-100 text-gray-700 border-gray-200"
+            }
+          >
+            {kaiwa.level}
+          </Badge>
+        </div>
       </div>
       <div className="px-4 sm:px-8 py-6 max-w-4xl mx-auto min-h-screen">
         {!practiceMode ? (
@@ -300,7 +321,7 @@ export default function KaiwaDetailPage() {
                                 </button>
                               </div>
 
-                              {line.romaji && (
+                              {line.romaji && showRomaji && (
                                 <div
                                   className={`text-sm italic mb-2 ${
                                     isRight ? "text-blue-100" : "text-gray-500"
@@ -456,7 +477,7 @@ export default function KaiwaDetailPage() {
                         </button>
                       </div>
 
-                      {currentLine?.romaji && (
+                      {currentLine?.romaji && showRomaji && (
                         <div
                           className={`text-sm italic mb-2 ${
                             isMyTurn ? "text-green-100" : "text-gray-500"
