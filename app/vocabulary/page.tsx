@@ -18,7 +18,7 @@ export default function VocabularyListPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState("Tất cả");
-  const [sortBy, setSortBy] = useState("name"); // name, level, wordCount
+  const [sortBy, setSortBy] = useState("id"); // id, name, level, wordCount
   const [page, setPage] = useState(1);
 
   const pageSize = 8;
@@ -57,6 +57,8 @@ export default function VocabularyListPage() {
     // Sort categories
     filtered.sort((a: any, b: any) => {
       switch (sortBy) {
+        case "id":
+          return parseInt(a.id) - parseInt(b.id);
         case "level":
           const levelOrder = ["N5", "N4", "N3", "N2", "N1"];
           return levelOrder.indexOf(a.level) - levelOrder.indexOf(b.level);
@@ -79,6 +81,7 @@ export default function VocabularyListPage() {
 
   const levels = ["Tất cả", "N5", "N4", "N3", "N2", "N1"];
   const sortOptions = [
+    { value: "id", label: "ID tăng dần" },
     { value: "name", label: "Tên A-Z" },
     { value: "level", label: "Trình độ" },
     { value: "wordCount", label: "Số từ" },
@@ -87,7 +90,7 @@ export default function VocabularyListPage() {
   const clearFilters = () => {
     setSearchQuery("");
     setSelectedLevel("Tất cả");
-    setSortBy("name");
+    setSortBy("id");
   };
 
   function handleFilterChange(fn: any) {
@@ -98,7 +101,7 @@ export default function VocabularyListPage() {
   }
 
   const hasActiveFilters =
-    searchQuery !== "" || selectedLevel !== "Tất cả" || sortBy !== "name";
+    searchQuery !== "" || selectedLevel !== "Tất cả" || sortBy !== "id";
 
   if (loading) {
     return (

@@ -12,6 +12,8 @@ import {
   Circle,
   ChevronsLeft,
   ChevronsRight,
+  Shuffle,
+  ListOrdered,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,6 +54,8 @@ export default function FlashcardPage({
   const [isFlipped, setIsFlipped] = useState(false);
   const [completedCards, setCompletedCards] = useState<Set<number>>(new Set());
   const [category, setCategory] = useState<Category | null>(null);
+  const [isRandomMode, setIsRandomMode] = useState(false);
+  const [shuffledWords, setShuffledWords] = useState<Word[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -65,6 +69,8 @@ export default function FlashcardPage({
           return;
         }
         setCategory(category);
+        // Khởi tạo shuffled words với thứ tự ban đầu
+        setShuffledWords([...category.words]);
 
         setIsLoading(false);
       }
@@ -75,6 +81,16 @@ export default function FlashcardPage({
       mounted = false;
     };
   }, [categoryId]);
+
+  // Hàm xáo trộn mảng
+  const shuffleArray = (array: Word[]) => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
 
   if (isLoading) {
     return (
@@ -105,7 +121,9 @@ export default function FlashcardPage({
     );
   }
 
-  const currentWord = category.words[currentIndex];
+  const currentWord = isRandomMode
+    ? shuffledWords[currentIndex]
+    : category.words[currentIndex];
   const progress = ((currentIndex + 1) / category.words.length) * 100;
 
   const handleNext = () => {
@@ -133,6 +151,20 @@ export default function FlashcardPage({
     setCurrentIndex(0);
     setIsFlipped(false);
     setCompletedCards(new Set());
+    if (isRandomMode) {
+      setShuffledWords(shuffleArray(category.words));
+    }
+  };
+
+  const toggleMode = () => {
+    const newMode = !isRandomMode;
+    setIsRandomMode(newMode);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setCompletedCards(new Set());
+    if (newMode) {
+      setShuffledWords(shuffleArray(category.words));
+    }
   };
 
   const handleSpeak = () => {
@@ -143,9 +175,9 @@ export default function FlashcardPage({
     <AppLayout>
       <PageHeader
         title={category.name}
-        subtitle={`${currentIndex + 1} / ${category.words.length} • Đã học: ${
-          completedCards.size
-        } từ`}
+        subtitle={`${currentIndex + 1} / ${category.words.length} • ${
+          isRandomMode ? "Ngẫu nhiên" : "Tuần tự"
+        } • Đã học: ${completedCards.size} từ`}
         icon={
           <div className="w-12 h-12 bg-gradient-to-br from-primary-400 to-primary-600 rounded-xl flex items-center justify-center">
             <span className="text-white text-lg japanese-text font-bold">
@@ -162,6 +194,21 @@ export default function FlashcardPage({
         }}
         actions={
           <div className="flex items-center space-x-2">
+            <Button
+              onClick={toggleMode}
+              variant="outline"
+              size="sm"
+              className={`border-primary-200 text-primary-600 hover:bg-primary-50 ${
+                isRandomMode ? "bg-primary-50" : ""
+              }`}
+            >
+              {isRandomMode ? (
+                <Shuffle className="mr-2 h-4 w-4" />
+              ) : (
+                <ListOrdered className="mr-2 h-4 w-4" />
+              )}
+              {isRandomMode ? "Ngẫu nhiên" : "Tuần tự"}
+            </Button>
             <Link href={`/vocabulary/${category.id}`}>
               <Button
                 variant="outline"

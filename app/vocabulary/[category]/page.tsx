@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, BookOpen, Play, Volume2 } from "lucide-react";
+import { ArrowLeft, BookOpen, Play, Volume2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,6 +143,18 @@ export default function CategoryPage() {
           </div>
 
           <div className="flex space-x-3">
+            <Link
+              href={`/vocabulary/${category.id}/practice`}
+              className="flex-1"
+            >
+              <Button
+                variant="outline"
+                className="w-full border-primary-200 text-primary-600 hover:bg-primary-50"
+              >
+                <Target className="mr-2 h-4 w-4" />
+                Luyện tập
+              </Button>
+            </Link>
             <Link href={`/flashcard/${category.id}`} className="flex-1">
               <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white">
                 <Play className="mr-2 h-4 w-4" />
