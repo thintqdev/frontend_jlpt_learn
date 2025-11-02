@@ -219,6 +219,16 @@ export default function FlashcardPage({
                 Danh sách
               </Button>
             </Link>
+            <Link href={`/vocabulary/${category.id}/practice`}>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-green-200 text-green-600 hover:bg-green-50"
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Luyện tập
+              </Button>
+            </Link>
             <Button
               onClick={handleReset}
               variant="outline"

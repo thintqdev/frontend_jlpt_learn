@@ -254,10 +254,10 @@ export default function VocabularyListPage() {
                     </div>
                   </div>
 
-                  <div className="flex space-x-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <Link
                       href={`/vocabulary/${category.id}`}
-                      className="flex-1"
+                      className="w-full"
                       prefetch={true}
                     >
                       <Button
@@ -270,11 +270,24 @@ export default function VocabularyListPage() {
                     </Link>
                     <Link
                       href={`/flashcard/${category.id}`}
-                      className="flex-1"
+                      className="w-full"
                       prefetch={true}
                     >
                       <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white">
                         Flash Card
+                      </Button>
+                    </Link>
+                    <Link
+                      href={`/vocabulary/${category.id}/practice`}
+                      className="w-full"
+                      prefetch={true}
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full bg-green-600 text-white hover:bg-green-500 hover:text-white"
+                      >
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Kiểm tra
                       </Button>
                     </Link>
                   </div>
