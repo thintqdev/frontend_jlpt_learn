@@ -65,6 +65,11 @@ export default function VocabularyPracticePage() {
   const [hasStarted, setHasStarted] = useState(false);
   const [showExplanation, setShowExplanation] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [rateLimited, setRateLimited] = useState(false);
+  const [rateLimitMessage, setRateLimitMessage] = useState<string | null>(null);
+  const [retryAfterSeconds, setRetryAfterSeconds] = useState<number | null>(
+    null
+  );
 
   useEffect(() => {
     if (!categoryId) {
@@ -107,6 +112,22 @@ export default function VocabularyPracticePage() {
           questionTypes: settings.questionTypes,
         }),
       });
+
+      // Handle 429 Too Many Requests explicitly with a friendly UI
+      if (response.status === 429) {
+        // try to read Retry-After header if provided
+        const retryHeader = response.headers.get("Retry-After");
+        const retrySeconds = retryHeader ? parseInt(retryHeader, 10) : null;
+        setRetryAfterSeconds(
+          retrySeconds && !isNaN(retrySeconds) ? retrySeconds : null
+        );
+        setRateLimitMessage(
+          "Máy AI đang quá bận — nó vừa bị yêu cầu uống quá nhiều cà phê. Hãy đợi một chút và thử lại nhé!"
+        );
+        setRateLimited(true);
+        setGeneratingQuestions(false);
+        return;
+      }
 
       if (!response.ok) {
         throw new Error("Failed to generate questions");
@@ -239,6 +260,62 @@ export default function VocabularyPracticePage() {
                   <div key={i} className="h-32 bg-gray-200 rounded"></div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (rateLimited) {
+    return (
+      <AppLayout>
+        <div className="min-h-screen bg-gradient-to-br from-yellow-50 to-yellow-100">
+          <div className="px-6 pt-12 pb-6">
+            <div className="max-w-2xl mx-auto text-center">
+              <div className="text-6xl mb-4">🥵🤖☕️</div>
+              <h2 className="text-2xl font-semibold mb-2">
+                Ối không — AI đang quá bận!
+              </h2>
+              <p className="text-gray-700 mb-4">
+                {rateLimitMessage ||
+                  "Hệ thống nhận quá nhiều yêu cầu cùng lúc."}
+              </p>
+              {retryAfterSeconds ? (
+                <p className="text-sm text-gray-600 mb-4">
+                  Bạn có thể thử lại sau khoảng{" "}
+                  <strong>{retryAfterSeconds} giây</strong>.
+                </p>
+              ) : (
+                <p className="text-sm text-gray-600 mb-4">
+                  Thử nhấn "Thử lại" sau vài giây — hoặc quay lại học từ trước
+                  khi AI tỉnh lại.
+                </p>
+              )}
+
+              <div className="flex items-center justify-center space-x-3">
+                <Button
+                  onClick={async () => {
+                    setRateLimited(false);
+                    setRateLimitMessage(null);
+                    setRetryAfterSeconds(null);
+                    setGeneratingQuestions(true);
+                    await generateQuestions(category?.words || []);
+                  }}
+                  className="bg-primary-600 hover:bg-primary-700 text-white"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" /> Thử lại
+                </Button>
+
+                <Link href={`/vocabulary/${categoryId}`}>
+                  <Button variant="outline">Quay lại danh sách từ</Button>
+                </Link>
+              </div>
+
+              <p className="mt-6 text-sm text-gray-500">
+                Gợi ý: nếu lỗi xảy ra thường xuyên, hãy giảm số câu mỗi lần hoặc
+                thử lại sau vài phút.
+              </p>
             </div>
           </div>
         </div>
@@ -626,7 +703,7 @@ export default function VocabularyPracticePage() {
                               if (part.trim() === "") return null;
                               const text = part.trim() + ".";
 
-                              if (text.startsWith("Câu nghĩa:")) {
+                              if (text.startsWith("Dịch nghĩa:")) {
                                 return (
                                   <div
                                     key={index}

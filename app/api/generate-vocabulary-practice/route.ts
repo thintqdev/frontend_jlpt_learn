@@ -84,7 +84,7 @@ Trả về JSON array với format:
     "question": "Câu tiếng Nhật có chỗ trống",
     "options": ["A. [TỪ ĐÚNG]", "B. [TỪ SAI 1]", "C. [TỪ SAI 2]", "D. [TỪ SAI 3]"],
     "correctAnswer": 0,
-    "explanation": "Câu nghĩa: [Nghĩa tiếng Việt của câu]. Đáp án đúng: [từ] ([nghĩa]). Các đáp án sai: B, C, D với nghĩa của từng từ. Lý do chọn đáp án đúng",
+    "explanation": "Dịch nghĩa: [Nghĩa tiếng Việt của câu]. Đáp án đúng: [từ]: [nghĩa]. Các đáp án sai: [từ: hiragana] [nghĩa], [từ: hiragana] [nghĩa], [từ: hiragana] [nghĩa].  ",
     "word": "kanji của từ đúng"
   }
 ]
@@ -101,12 +101,16 @@ QUAN TRỌNG: Chỉ trả về JSON array, không có text nào khác!`;
 
 		const questions = JSON.parse(cleanedText);
 
-		// Add unique IDs and wordData
-		return questions.map((q: any, index: number) => ({
-			...q,
-			id: `ai_${Date.now()}_${index}`,
-			wordData: words.find(w => w.kanji === q.word) || words[index % words.length]
-		}));
+		// Add unique IDs, wordData and randomize options so correct answer isn't always A
+		return questions.map((q: any, index: number) => {
+			const wordData = words.find(w => w.kanji === q.word) || words[index % words.length];
+			const normalized = normalizeAndShuffleQuestionOptions({ ...q, wordData, word: q.word || wordData?.kanji });
+			return {
+				...normalized,
+				id: `ai_${Date.now()}_${index}`,
+				wordData,
+			};
+		});
 	} catch (error) {
 		console.error("Error parsing AI response:", error);
 		// Fallback to individual generation
@@ -211,15 +215,63 @@ CHÚ Ý: Chỉ trả về JSON, không có text nào khác!`;
 
 	try {
 		const parsed = JSON.parse(responseText);
+
+		// Normalize and shuffle options so correct answer isn't always A
+		const normalized = normalizeAndShuffleQuestionOptions({ ...parsed, wordData: word, word: parsed.word || word.kanji });
+
 		return {
 			id: `fib_${Date.now()}_${Math.random()}`,
-			...parsed,
+			...normalized,
 			wordData: word
 		};
 	} catch (error) {
 		// Fallback
 		return createFallbackJLPTQuestion(word, allWords);
 	}
+}
+
+/**
+ * Normalize option strings (strip leading "A. ", etc), shuffle them with Fisher-Yates
+ * and set `correctAnswer` to the new index for the option that matches the question word.
+ */
+function normalizeAndShuffleQuestionOptions(q: any) {
+	if (!q || !Array.isArray(q.options) || q.options.length === 0) return q;
+
+	// Strip leading labels like "A. ", "B. " if present
+	const stripped = q.options.map((opt: string) => (opt || '').toString().replace(/^[A-D]\.\s*/i, '').trim());
+
+	// Determine the original correct option index
+	let originalCorrect = -1;
+	const correctWord = (q.word || (q.wordData && q.wordData.kanji) || '').toString();
+
+	if (correctWord) {
+		originalCorrect = stripped.findIndex((s: string) => s === correctWord || s.includes(correctWord) || correctWord.includes(s));
+	}
+
+	if (originalCorrect === -1 && typeof q.correctAnswer === 'number' && stripped[q.correctAnswer]) {
+		originalCorrect = q.correctAnswer;
+	}
+
+	if (originalCorrect === -1) {
+		// last resort: assume first option is intended correct
+		originalCorrect = 0;
+	}
+
+	// Create items with original indices and shuffle them
+	const items = stripped.map((text: string, idx: number) => ({ text, origIdx: idx }));
+	for (let i = items.length - 1; i > 0; i--) {
+		const j = Math.floor(Math.random() * (i + 1));
+		[items[i], items[j]] = [items[j], items[i]];
+	}
+
+	const newOptions = items.map((it: { text: string; origIdx: number }, idx: number) => `${String.fromCharCode(65 + idx)}. ${it.text}`);
+	const newCorrect = items.findIndex((it: { text: string; origIdx: number }) => it.origIdx === originalCorrect);
+
+	return {
+		...q,
+		options: newOptions,
+		correctAnswer: newCorrect >= 0 ? newCorrect : 0,
+	};
 }
 
 function createFallbackJLPTQuestion(word: any, allWords: any[]) {
