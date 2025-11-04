@@ -6,7 +6,6 @@ import { Search, Filter, BookOpen, Users, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import AppLayout from "@/components/app-layout";
 import PageHeader from "@/components/page-header";
 import { fetchShortCategories } from "@/lib/category";
@@ -254,7 +253,7 @@ export default function VocabularyListPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                     <Link
                       href={`/vocabulary/${category.id}`}
                       className="w-full"
@@ -288,6 +287,19 @@ export default function VocabularyListPage() {
                       >
                         <BookOpen className="mr-2 h-4 w-4" />
                         Kiểm tra
+                      </Button>
+                    </Link>
+                    <Link
+                      href={`/vocabulary/${category.id}/reading`}
+                      className="w-full"
+                      prefetch={true}
+                    >
+                      <Button
+                        variant="outline"
+                        className="w-full bg-blue-600 text-white hover:bg-blue-500 hover:text-white"
+                      >
+                        <BookOpen className="mr-2 h-4 w-4" />
+                        Đọc hiểu
                       </Button>
                     </Link>
                   </div>

@@ -155,6 +155,18 @@ export default function CategoryPage() {
                 Luyện tập
               </Button>
             </Link>
+            <Link
+              href={`/vocabulary/${category.id}/reading`}
+              className="flex-1"
+            >
+              <Button
+                variant="outline"
+                className="w-full border-blue-200 text-blue-600 hover:bg-blue-50"
+              >
+                <BookOpen className="mr-2 h-4 w-4" />
+                Đọc hiểu
+              </Button>
+            </Link>
             <Link href={`/flashcard/${category.id}`} className="flex-1">
               <Button className="w-full bg-primary-600 hover:bg-primary-700 text-white">
                 <Play className="mr-2 h-4 w-4" />
